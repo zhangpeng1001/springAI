@@ -1,0 +1,74 @@
+Spring AI 项目介绍
+
+Spring AI 是 Spring 生态官方推出的 AI 应用开发框架，旨在将 Spring 的设计理念（如可移植性、模块化）引入 AI 领域。
+它的目标是让 Java 开发者能够像使用 Spring Data、Spring Security 一样，以 Spring 的方式开发 AI 应用。
+
+一、核心功能
+
+1. 聊天模型（Chat Model）
+Spring AI 提供统一的 ChatModel 接口，支持多种大语言模型提供商：
+- OpenAI（GPT 系列）
+- Anthropic（Claude 系列）
+- Google（Gemini）
+- 阿里通义千问
+- 智谱 AI（GLM）
+- 百度文心一言
+- Ollama（本地模型）
+开发者只需修改配置即可切换模型，业务代码无需改动。
+
+2. 聊天客户端（Chat Client）
+ChatClient 是 Spring AI 推荐的高级 API，类似 RestTemplate 的设计。
+支持链式调用、流式响应、工具调用、结构化输出等高级功能。
+
+3. 提示词模板（Prompt Template）
+支持变量替换的提示词管理，使用 StringTemplate 语法。
+可以将提示词放在 .st 文件中，实现提示词与代码分离。
+
+4. 结构化输出（Structured Output）
+可以将大模型的输出自动转换为 Java 对象（POJO）、List、Map 等。
+底层通过 JSON Schema 约束大模型输出格式。
+
+5. 函数调用（Function Calling / Tool Calling）
+允许大模型调用 Java 方法，获取实时数据或执行操作。
+通过 @Tool 注解声明工具方法。
+
+6. 多模态（Multimodal）
+支持在用户消息中嵌入图片、音频等多种媒体类型。
+支持文生图（ImageModel）。
+
+7. 会话记忆（Chat Memory）
+管理对话历史，支持多轮对话。
+提供 InMemory、JDBC 等多种存储后端。
+
+8. 检索增强生成（RAG）
+包括文档加载（DocumentReader）、分割（TextSplitter）、向量化（Embedding）、存储（VectorStore）的完整 ETL 流程。
+支持 SimpleVectorStore、PgVector、Redis、Chroma 等向量数据库。
+
+9. 向量存储（Vector Store）
+统一的 VectorStore 接口，支持相似度检索。
+支持过滤条件、元数据管理等。
+
+10. 评估（Evaluation）
+提供模型输出评估能力。
+
+二、设计理念
+
+Spring AI 遵循 Spring 的核心设计原则：
+- 可移植性：统一接口，一套代码多种模型
+- 模块化：按需引入 starter 依赖
+- 可扩展：支持自定义实现
+- 与 Spring 生态无缝集成：自动配置、依赖注入
+
+三、版本信息
+
+Spring AI 1.0.0 是首个正式发布版本（GA），要求：
+- Java 17 及以上
+- Spring Boot 3.3 及以上
+
+四、应用场景
+
+- 智能客服：基于知识库回答客户问题
+- 文档问答：对私有文档进行问答
+- 代码助手：辅助编程和代码审查
+- 数据分析：自然语言查询数据库
+- 内容生成：自动生成文案、报告等

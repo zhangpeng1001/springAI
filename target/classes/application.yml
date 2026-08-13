@@ -1,0 +1,65 @@
+# ====================================================================
+# Spring AI Demo 应用配置文件
+# 本项目使用 OpenAI 兼容接口，可配置 OpenAI 官方或任何兼容服务
+# ====================================================================
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: spring-ai-demo
+
+  # ====================================================================
+  # Spring AI 配置
+  # 文档参考：https://docs.spring.io/spring-ai/reference/
+  # ====================================================================
+  ai:
+    openai:
+      # --- OpenAI 兼容接口基础配置 ---
+      # base-url：API 地址。
+      #   - OpenAI 官方：https://api.openai.com（默认值，可省略）
+      #   - 国内兼容服务示例（请替换为你实际使用的服务地址）：
+      #     智谱 GLM：https://open.bigmodel.cn/api/paas/v4
+      #     通义千问：https://dashscope.aliyuncs.com/compatible-mode/v1
+      #     DeepSeek：https://api.deepseek.com
+      #     火山方舟：https://ark.cn-beijing.volces.com/api/v3
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+
+      # api-key：你的 API 密钥。
+      # 推荐通过环境变量 OPENAI_API_KEY 注入，避免硬编码到代码中。
+      # 启动前请设置环境变量：set OPENAI_API_KEY=sk-xxxx（Windows）
+      api-key: ${OPENAI_API_KEY:sk-your-api-key-here}
+
+      # --- 聊天模型（ChatModel）配置 ---
+      chat:
+        options:
+          # 模型名称：请根据你使用的服务填写对应模型名
+          # OpenAI 示例：gpt-4o、gpt-4o-mini、gpt-3.5-turbo
+          # 智谱示例：glm-4、glm-4-flash
+          # 通义示例：qwen-plus、qwen-turbo
+          # DeepSeek 示例：deepseek-chat
+          model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
+          # 生成温度：0.0~2.0，值越大回答越发散有创造力，值越小越稳定确定
+          temperature: 0.7
+          # 最大输出 token 数
+          max-tokens: 2000
+
+      # --- 嵌入模型（EmbeddingModel）配置 ---
+      # 用于 RAG 检索增强生成，将文本转换为向量
+      embedding:
+        options:
+          # 嵌入模型名称
+          # OpenAI：text-embedding-3-small、text-embedding-3-large
+          # 智谱：embedding-3
+          # 通义：text-embedding-v2
+          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+
+# ====================================================================
+# 日志配置：开启 DEBUG 级别可以看到 Spring AI 的请求和响应详情，便于学习
+# ====================================================================
+logging:
+  level:
+    org.springframework.ai: DEBUG
+    org.springframework.web: INFO
+    com.example.springaidemo: DEBUG

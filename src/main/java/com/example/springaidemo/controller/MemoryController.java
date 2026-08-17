@@ -1,144 +1,118 @@
 package com.example.springaidemo.controller;
 
-import com.example.springaidemo.common.Result;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.web.bind.annotation.*;
 
 /**
- * 会话记忆（Chat Memory）控制器
+ * 会话记忆控制器
  * <p>
- * 默认情况下，大模型是无状态的，每次请求都是独立的，不记得之前的对话。
- * 会话记忆功能让 AI 能够"记住"之前的对话内容，实现真正的多轮对话。
- * <p>
- * 核心概念：
+ * 演示 Spring AI 2.0 的会话记忆（ChatMemory）功能：
  * <ul>
- *     <li>{@link ChatMemory}：管理对话历史的接口</li>
- *     <li>{@link MessageChatMemoryAdvisor}：Advisor（顾问），自动在请求中加入历史消息</li>
- *     <li>conversationId（会话 ID）：区分不同用户的对话，类似 session ID</li>
+ *     <li>MessageChatMemoryAdvisor - 自动管理多轮对话历史</li>
+ *     <li>会话隔离 - 每个用户有独立的对话历史</li>
+ *     <li>记忆清除 - 支持清除指定会话的历史</li>
  * </ul>
  * <p>
- * 工作原理：
- * <ol>
- *     <li>每次请求时，Advisor 从 ChatMemory 读取该会话的历史消息</li>
- *     <li>将历史消息 + 当前消息一起发送给大模型</li>
- *     <li>大模型生成回复后，Advisor 自动将新消息存入 ChatMemory</li>
- * </ol>
+ * Spring AI 2.0 重要变化：
+ * <ul>
+ *     <li>使用 MessageWindowChatMemory + InMemoryChatMemoryRepository</li>
+ *     <li>MessageChatMemoryAdvisor 通过 builder(ChatMemory) 创建</li>
+ *     <li>通过 ChatMemory.CONVERSATION_ID 常量传递会话 ID</li>
+ * </ul>
  *
  * @author spring-ai-demo
  */
 @RestController
-@RequestMapping("/memory")
+@RequestMapping("/api/memory")
 public class MemoryController {
 
     private final ChatClient chatClient;
     private final ChatMemory chatMemory;
 
-    public MemoryController(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory) {
-        this.chatClient = chatClientBuilder.build();
+    public MemoryController(ChatClient chatClient, ChatMemory chatMemory) {
+        this.chatClient = chatClient;
         this.chatMemory = chatMemory;
     }
 
     /**
-     * 接口1：带记忆的多轮对话
+     * 带会话记忆的对话
      * <p>
-     * 通过 conversationId 关联同一会话的消息，AI 会记住之前的对话。
+     * 使用 MessageChatMemoryAdvisor 实现多轮对话记忆。
+     * 相同 sessionId 的请求会共享记忆。
      * <p>
-     * 测试步骤（使用同一个 sessionId）：
-     * 1. GET /memory/chat?sessionId=user1&message=我叫张三
-     * 2. GET /memory/chat?sessionId=user1&message=我喜欢打篮球
-     * 3. GET /memory/chat?sessionId=user1&message=我叫什么名字？我喜欢什么？
-     * <p>
-     * 第3步 AI 能正确回答"张三"和"打篮球"，因为它记住了之前的对话。
+     * 通过 advisors() 方法添加 MessageChatMemoryAdvisor，
+     * 并在 AdvisorSpec 中设置 CONVERSATION_ID 参数。
      *
-     * @param sessionId 会话 ID，用于区分不同用户/对话
+     * @param sessionId 会话唯一标识，相同 ID 的请求会共享记忆
      * @param message   用户消息
-     * @return AI 的回复
+     * @return AI 回复
      */
     @GetMapping("/chat")
-    public Result<String> chatWithMemory(
-            @RequestParam(defaultValue = "default-session") String sessionId,
+    public String memoryChat(
+            @RequestParam String sessionId,
             @RequestParam String message) {
 
-        // MessageChatMemoryAdvisor 的作用：
-        // 1. 请求前：从 ChatMemory 读取 sessionId 对应的历史消息，加入当前请求
-        // 2. 请求后：将本次的 user 消息和 assistant 回复存入 ChatMemory
-        String response = chatClient.prompt()
+        // 创建 MessageChatMemoryAdvisor
+        MessageChatMemoryAdvisor memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
+
+        return chatClient.prompt()
                 .user(message)
-                .advisors(MessageChatMemoryAdvisor.builder(chatMemory)
-                        .conversationId(sessionId)  // 绑定会话 ID
-                        .build())
+                // 添加记忆 Advisor
+                .advisors(memoryAdvisor)
+                // 设置会话 ID
+                .advisors(advisorSpec -> advisorSpec
+                        .param(ChatMemory.CONVERSATION_ID, sessionId))
                 .call()
                 .content();
-
-        return Result.success(response);
     }
 
     /**
-     * 接口2：查看某个会话的历史消息
+     * 带系统提示的记忆对话
      * <p>
-     * 演示如何从 ChatMemory 中获取存储的对话历史。
-     * 访问示例：GET /memory/history?sessionId=user1
-     *
-     * @param sessionId 会话 ID
-     * @return 该会话的所有消息列表
+     * 同时使用系统提示和会话记忆，让 AI 既有角色设定又能记住上下文。
      */
-    @GetMapping("/history")
-    public Result<List<String>> getHistory(@RequestParam String sessionId) {
-        // 从 ChatMemory 获取该会话的所有消息
-        var messages = chatMemory.get(sessionId);
+    @GetMapping("/chat-with-system")
+    public String memoryChatWithSystem(
+            @RequestParam String sessionId,
+            @RequestParam String message,
+            @RequestParam(defaultValue = "你是一个友好的助手，能够记住之前的对话上下文。") String systemPrompt) {
 
-        // 将消息转换为可读格式
-        List<String> history = new ArrayList<>();
-        for (var message : messages) {
-            String role = message.getMessageType().getValue();
-            String content = message.getText();
-            history.add(String.format("[%s]: %s", role, content));
-        }
+        MessageChatMemoryAdvisor memoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory).build();
 
-        return Result.success(history);
+        return chatClient.prompt()
+                .system(systemPrompt)
+                .user(message)
+                .advisors(memoryAdvisor)
+                .advisors(advisorSpec -> advisorSpec
+                        .param(ChatMemory.CONVERSATION_ID, sessionId))
+                .call()
+                .content();
     }
 
     /**
-     * 接口3：清除某个会话的记忆
+     * 清除指定会话的记忆
      * <p>
-     * 演示如何手动清除会话记忆。
-     * 访问示例：GET /memory/clear?sessionId=user1
-     *
-     * @param sessionId 要清除的会话 ID
-     * @return 操作结果
+     * Spring AI 2.0 中 ChatMemory.clear() 方法需要传 conversationId。
      */
-    @GetMapping("/clear")
-    public Result<String> clearMemory(@RequestParam String sessionId) {
-        // 清除指定会话的所有消息
+    @DeleteMapping("/clear")
+    public String clearMemory(@RequestParam String sessionId) {
+        // 调用 ChatMemory 的 clear 方法清除指定会话
         chatMemory.clear(sessionId);
-        return Result.success("会话 " + sessionId + " 的记忆已清除");
+        return "会话 " + sessionId + " 的记忆已清除";
     }
 
     /**
-     * 接口4：无记忆对话（对比演示）
-     * <p>
-     * 不使用 Advisor，每次请求都是独立的，AI 不会记得之前说了什么。
-     * 可以与 /memory/chat 对比测试，体会记忆功能的差异。
-     * 访问示例：GET /memory/no-memory?message=我叫什么名字？
-     *
-     * @param message 用户消息
-     * @return AI 的回复
+     * 获取当前会话记忆实现类型
      */
-    @GetMapping("/no-memory")
-    public Result<String> chatWithoutMemory(@RequestParam String message) {
-        // 不添加 MemoryAdvisor，每次都是全新对话
-        String response = chatClient.prompt()
-                .user(message)
-                .call()
-                .content();
-        return Result.success(response);
+    @GetMapping("/info")
+    public String getMemoryInfo() {
+        return "当前 ChatMemory 实现：" + chatMemory.getClass().getSimpleName()
+                + "\n说明：MessageWindowChatMemory 数据存储在内存中，重启后丢失"
+                + "\n通过 InMemoryChatMemoryRepository 持久化到内存"
+                + "\n生产环境可实现 ChatMemoryRepository 接口来持久化数据";
     }
 }

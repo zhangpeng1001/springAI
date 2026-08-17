@@ -1,220 +1,182 @@
-# Spring AI 学习 Demo 项目
+# Spring AI 2.0.0 GA 学习项目
 
-> 一个涵盖 Spring AI 核心功能的学习项目，包含详细的中文注释和文档说明。
+> 本项目基于 Spring AI **2.0.0 GA**（2026年6月12日发布），演示 Spring AI 的核心功能。
 
-## 项目简介
+## 📋 版本信息
 
-本项目基于 **Spring Boot 3.3 + Spring AI 1.0.0** 构建，实现了 Spring AI 的所有核心功能模块，
-每个功能都有完整的代码示例、详细中文注释和对应的文档说明，非常适合作为 Spring AI 的入门学习资料。
+| 技术栈 | 版本 |
+|--------|------|
+| Java | **21+** (Spring AI 2.0 最低要求) |
+| Spring Boot | **4.0.0** |
+| Spring AI | **2.0.0 GA** |
+| Maven | 3.8+ |
 
-## 功能模块一览
+## 🚀 快速开始
 
-| 序号 | 功能模块 | 说明 | 接口前缀 | 文档 |
-|------|---------|------|---------|------|
-| 1 | 基础聊天 | ChatClient 基本用法、ChatModel、运行时参数覆盖 | `/chat` | [聊天功能文档](docs/01-聊天功能.md) |
-| 2 | 提示词模板 | PromptTemplate 变量替换、外部模板文件、系统提示词 | `/prompt` | [提示词模板文档](docs/02-提示词模板.md) |
-| 3 | 结构化输出 | 将 AI 输出转为 POJO、List、Map，信息抽取 | `/structured` | [结构化输出文档](docs/03-结构化输出.md) |
-| 4 | 多模态 | 图片理解（URL/本地）、文生图 | `/multimodal` | [多模态文档](docs/04-多模态.md) |
-| 5 | 函数调用 | @Tool 注解、天气查询、计算器、多工具组合 | `/function` | [函数调用文档](docs/05-函数调用.md) |
-| 6 | 会话记忆 | ChatMemory、多轮对话、会话管理 | `/memory` | [会话记忆文档](docs/06-会话记忆.md) |
-| 7 | RAG 检索增强 | 文档加载、向量化、知识库问答 | `/rag` | [RAG 文档](docs/07-RAG检索增强.md) |
+### 1. 环境准备
 
-## 项目结构
-
-```
-springAI/
-├── pom.xml                              # Maven 配置（依赖管理）
-├── README.md                            # 项目说明（本文件）
-├── docs/                                # 详细文档目录
-│   ├── 01-聊天功能.md
-│   ├── 02-提示词模板.md
-│   ├── 03-结构化输出.md
-│   ├── 04-多模态.md
-│   ├── 05-函数调用.md
-│   ├── 06-会话记忆.md
-│   └── 07-RAG检索增强.md
-└── src/main/
-    ├── java/com/example/springaidemo/
-    │   ├── SpringAiDemoApplication.java     # 启动类
-    │   ├── config/
-    │   │   └── AiConfig.java                # AI 配置（ChatClient、ChatMemory）
-    │   ├── common/
-    │   │   └── Result.java                  # 统一返回结果封装
-    │   ├── controller/
-    │   │   ├── ChatController.java          # 聊天功能
-    │   │   ├── PromptController.java        # 提示词模板
-    │   │   ├── StructuredOutputController.java  # 结构化输出
-    │   │   ├── MultimodalController.java    # 多模态
-    │   │   ├── FunctionCallController.java  # 函数调用
-    │   │   ├── MemoryController.java        # 会话记忆
-    │   │   └── RagController.java           # RAG 检索增强
-    │   ├── function/
-    │   │   ├── WeatherTools.java            # 天气查询工具
-    │   │   └── CalculatorTools.java          # 计算器工具
-    │   ├── model/
-    │   │   └── ActorFilms.java              # 结构化输出示例模型
-    │   └── service/
-    │       └── RagService.java              # RAG 知识库服务
-    └── resources/
-        ├── application.yml                  # 应用配置（API Key 等）
-        ├── prompts/                         # 提示词模板文件
-        │   ├── translate.st
-        │   └── joke.st
-        └── docs/                            # RAG 知识库文档
-            ├── spring-ai-intro.txt
-            └── company-info.txt
-```
-
-## 快速开始
-
-### 1. 环境要求
-
-- **JDK 17+**（Spring AI 1.0.0 最低要求）
-- **Maven 3.6+**
-- 一个 OpenAI 兼容的 API Key（支持 OpenAI 官方或国内兼容服务）
+确保已安装：
+- **JDK 21+**
+- **Maven 3.8+**
+- 一个兼容 OpenAI 接口的 AI 服务账号
 
 ### 2. 配置 API Key
 
-编辑 `src/main/resources/application.yml`，或通过环境变量配置：
-
-**方式一：环境变量（推荐）**
+在 `application.yml` 中配置，或通过环境变量：
 
 ```bash
 # Windows PowerShell
-$env:OPENAI_API_KEY="sk-your-api-key"
-$env:OPENAI_BASE_URL="https://api.openai.com"
-$env:OPENAI_CHAT_MODEL="gpt-4o-mini"
+$env:OPENAI_API_KEY = "your-api-key"
+$env:OPENAI_BASE_URL = "https://api.openai.com"
 
-# Linux / macOS
-export OPENAI_API_KEY=sk-your-api-key
-export OPENAI_BASE_URL=https://api.openai.com
-export OPENAI_CHAT_MODEL=gpt-4o-mini
+# Linux/Mac
+export OPENAI_API_KEY="your-api-key"
 ```
 
-**方式二：修改配置文件**
-
-直接修改 `application.yml` 中的 `spring.ai.openai` 配置项。
-
-### 3. 常见模型服务配置
-
-| 服务商 | base-url | 推荐模型 |
-|--------|----------|---------|
-| OpenAI | `https://api.openai.com` | `gpt-4o-mini` / `gpt-4o` |
-| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4-flash` / `glm-4` |
-| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-turbo` / `qwen-plus` |
-| DeepSeek | `https://api.deepseek.com` | `deepseek-chat` |
-| 火山方舟 | `https://ark.cn-beijing.volces.com/api/v3` | `doubao-pro` |
-
-### 4. 启动项目
+### 3. 启动项目
 
 ```bash
-# 在项目根目录执行
 mvn spring-boot:run
 ```
 
-启动成功后，应用运行在 `http://localhost:8080`。
+### 4. 测试 API
 
-### 5. 测试接口
-
-打开浏览器访问以下接口（或使用 curl / Postman）：
+打开浏览器或使用 curl/Postman 访问：
 
 ```bash
-# 基础聊天
-curl "http://localhost:8080/chat/simple?message=你好"
+# 简单对话
+curl "http://localhost:8080/api/chat/simple?message=你好"
 
-# 提示词模板
-curl "http://localhost:8080/prompt/inline?topic=面向对象编程&language=Python"
+# 流式对话
+curl "http://localhost:8080/api/chat/stream?message=介绍一下Spring AI"
 
-# 结构化输出
-curl "http://localhost:8080/structured/actor?name=周星驰"
-
-# 函数调用 - 天气查询
-curl "http://localhost:8080/function/weather?question=北京今天天气怎么样"
-
-# 会话记忆（多轮对话）
-curl "http://localhost:8080/memory/chat?sessionId=user1&message=我叫张三"
-curl "http://localhost:8080/memory/chat?sessionId=user1&message=我叫什么名字"
-
-# RAG 知识库问答
-curl "http://localhost:8080/rag/ask?question=Spring AI是什么"
+# 使用 RAG 问答（先初始化知识库）
+curl -X POST "http://localhost:8080/api/rag/init-sample-data"
+curl "http://localhost:8080/api/rag/ask?question=Spring AI 是什么"
 ```
 
-## 接口总览
+## 📚 功能模块
 
-### 聊天功能 `/chat`
-| 接口 | 说明 |
-|------|------|
-| `GET /chat/simple` | 简单对话 |
-| `GET /chat/detail` | 获取完整响应（含 token 统计） |
-| `GET /chat/model` | 使用底层 ChatModel |
-| `GET /chat/creative` | 运行时覆盖参数（高温度创意写作） |
+| 模块 | API 路径 | 说明 |
+|------|----------|------|
+| [基础聊天](docs/chat.md) | `/api/chat/*` | 单轮、流式、多轮对话 |
+| [提示词模板](docs/prompt.md) | `/api/prompt/*` | 变量替换、角色设定 |
+| [结构化输出](docs/structured-output.md) | `/api/structured/*` | AI 输出转 Java 对象 |
+| [多模态](docs/multimodal.md) | `/api/multimodal/*` | 图片理解 |
+| [函数调用](docs/function-calling.md) | `/api/function/*` | AI 调用外部工具 |
+| [会话记忆](docs/memory.md) | `/api/memory/*` | 多轮对话上下文 |
+| [RAG 检索增强](docs/rag.md) | `/api/rag/*` | 向量检索+AI 生成 |
 
-### 提示词模板 `/prompt`
-| 接口 | 说明 |
-|------|------|
-| `GET /prompt/inline` | 内联模板 |
-| `GET /prompt/external` | 外部模板文件 |
-| `GET /prompt/system` | 系统提示词 |
+## 📖 详细文档
 
-### 结构化输出 `/structured`
-| 接口 | 说明 |
-|------|------|
-| `GET /structured/actor` | 输出为 POJO |
-| `GET /structured/list` | 输出为 List |
-| `GET /structured/map` | 输出为 Map |
-| `GET /structured/extract` | 信息抽取 |
+- [功能架构总览](docs/architecture.md)
+- [Spring AI 2.0 新特性](docs/whats-new-2.0.md)
+- [API 参考](docs/api-reference.md)
 
-### 多模态 `/multimodal`
-| 接口 | 说明 |
-|------|------|
-| `GET /multimodal/url` | 分析网络图片 |
-| `GET /multimodal/local` | 分析本地图片 |
-| `GET /multimodal/generate` | 文生图 |
+## 🎯 核心概念
 
-### 函数调用 `/function`
-| 接口 | 说明 |
-|------|------|
-| `GET /function/weather` | 天气查询 |
-| `GET /function/calc` | 计算器 |
-| `GET /function/multi` | 多工具组合 |
-| `GET /function/forecast` | 天气预报 |
+### ChatClient
 
-### 会话记忆 `/memory`
-| 接口 | 说明 |
-|------|------|
-| `GET /memory/chat` | 带记忆的多轮对话 |
-| `GET /memory/history` | 查看会话历史 |
-| `GET /memory/clear` | 清除会话记忆 |
-| `GET /memory/no-memory` | 无记忆对话（对比） |
+Spring AI 2.0 推荐的高级 API，封装了模型调用、Prompt 构建、Advisor 管理等功能。
 
-### RAG `/rag`
-| 接口 | 说明 |
-|------|------|
-| `GET /rag/ask` | 基于知识库问答 |
-| `GET /rag/search` | 检索文档片段 |
-| `GET /rag/no-rag` | 不使用 RAG（对比） |
-| `GET /rag/reload` | 重新加载知识库 |
+```java
+// 最简调用
+String reply = chatClient.prompt()
+    .user("你好")
+    .call()
+    .content();
+```
 
-## 学习路径建议
+### Advisor
 
-建议按以下顺序学习各模块：
+Advisor 是 Spring AI 的核心扩展机制，类似 Spring AOP，可以在不修改核心逻辑的情况下添加功能：
 
-1. **基础聊天** → 理解 ChatClient 和 ChatModel 的基本用法
-2. **提示词模板** → 学会管理复用提示词
-3. **结构化输出** → 掌握让 AI 输出程序可处理的数据
-4. **函数调用** → 让 AI 能调用外部工具获取实时数据
-5. **会话记忆** → 实现多轮对话
-6. **多模态** → 处理图片等非文本输入
-7. **RAG 检索增强** → 构建基于私有知识库的问答系统
+- **QuestionAnswerAdvisor** - RAG 检索增强
+- **MessageChatMemoryAdvisor** - 会话记忆
+- **ToolCallingAdvisor** - 函数调用（2.0 中需要额外引入）
 
-## 技术栈
+### RAG 工作流
 
-- **Java 17**
-- **Spring Boot 3.3.0**
-- **Spring AI 1.0.0**
-- **Maven**
+```
+用户提问 → 向量化 → 检索相关文档 → 注入上下文 → AI 生成回答
+```
 
-## 参考文档
+## 🔧 国内 AI 服务配置示例
 
-- [Spring AI 官方文档](https://docs.spring.io/spring-ai/reference/)
-- [Spring AI GitHub](https://github.com/spring-projects/spring-ai)
+### 智谱 AI
+
+```yaml
+spring:
+  ai:
+    openai:
+      base-url: https://open.bigmodel.cn/api/paas/v4
+      api-key: your-zhipu-api-key
+      chat:
+        options:
+          model: glm-4
+      embedding:
+        options:
+          model: embedding-3
+```
+
+### 通义千问
+
+```yaml
+spring:
+  ai:
+    openai:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: your-dashscope-api-key
+      chat:
+        options:
+          model: qwen-plus
+      embedding:
+        options:
+          model: text-embedding-v1
+```
+
+### DeepSeek
+
+```yaml
+spring:
+  ai:
+    openai:
+      base-url: https://api.deepseek.com
+      api-key: your-deepseek-api-key
+      chat:
+        options:
+          model: deepseek-chat
+```
+
+## ⚠️ Spring AI 2.0 重要变化
+
+1. **Java 版本要求**：从 Java 17 提升到 **Java 21+**
+2. **Spring Boot 版本**：支持 **Spring Boot 4.0+**
+3. **模块重命名**：`spring-ai-advisors-vector-store` → `spring-ai-vector-store-advisor`
+4. **ChatMemory**：`conversationId` 变为必选参数
+5. **PromptChatMemoryAdvisor**：已移除，使用 `MessageChatMemoryAdvisor`
+6. **Options 不可变**：所有 Options 类现在严格不可变，需使用 Builder
+7. **结构化输出**：使用 `entity()` 方法替代旧的 BeanOutputConverter
+
+## 📁 项目结构
+
+```
+src/main/java/com/example/springaidemo/
+├── SpringAiDemoApplication.java    # 启动类
+├── config/
+│   └── AiConfig.java               # AI 组件配置
+├── controller/
+│   ├── ChatController.java         # 基础聊天
+│   ├── PromptController.java       # 提示词模板
+│   ├── StructuredOutputController.java  # 结构化输出
+│   ├── MultimodalController.java   # 多模态
+│   ├── FunctionCallController.java # 函数调用
+│   ├── MemoryController.java       # 会话记忆
+│   └── RagController.java          # RAG 检索增强
+└── service/
+    └── RagService.java             # RAG 业务逻辑
+```
+
+## 📝 License
+
+本项目仅供学习使用。

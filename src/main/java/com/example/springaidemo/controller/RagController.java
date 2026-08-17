@@ -1,133 +1,221 @@
 package com.example.springaidemo.controller;
 
-import com.example.springaidemo.common.Result;
 import com.example.springaidemo.service.RagService;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.ai.document.Document;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * RAG（检索增强生成）控制器
+ * RAG 检索增强生成控制器
  * <p>
- * 本控制器演示如何让 AI 基于知识库文档回答问题。
+ * 提供知识库管理和 RAG 问答的 REST API。
+ * RAG = Retrieval-Augmented Generation，检索增强生成。
  * <p>
- * 核心组件：
+ * 完整工作流程：
+ * <pre>
+ * 用户提问 → 向量检索 → 获取相关文档 → 注入上下文 → AI 生成回答
+ * </pre>
+ * <p>
+ * Spring AI 2.0 重要变化：
  * <ul>
- *     <li>{@link QuestionAnswerAdvisor}：RAG 顾问，自动完成"检索→注入上下文→生成"</li>
- *     <li>VectorStore：向量存储，存储文档片段的向量表示</li>
+ *     <li>Document 使用 builder() 构建</li>
+ *     <li>QuestionAnswerAdvisor 通过 builder(VectorStore) 创建</li>
  * </ul>
- * <p>
- * 测试步骤：
- * 1. 应用启动时会自动加载 resources/docs/ 下的知识文档
- * 2. 访问 /rag/ask 接口提问，AI 会基于文档内容回答
- * 3. 访问 /rag/search 接口可以单独查看检索到的文档片段
  *
  * @author spring-ai-demo
  */
 @RestController
-@RequestMapping("/rag")
+@RequestMapping("/api/rag")
 public class RagController {
 
-    private final ChatClient chatClient;
     private final RagService ragService;
 
-    public RagController(ChatClient.Builder chatClientBuilder, RagService ragService) {
-        this.chatClient = chatClientBuilder.build();
+    public RagController(RagService ragService) {
         this.ragService = ragService;
     }
 
     /**
-     * 接口1：基于知识库的问答（RAG 核心功能）
+     * 添加知识文档到向量存储
      * <p>
-     * 当用户提问时：
-     * 1. QuestionAnswerAdvisor 自动将问题向量化并在 VectorStore 中检索相关文档
-     * 2. 将检索到的文档作为上下文注入到 Prompt 中
-     * 3. 大模型基于上下文文档回答问题
-     * <p>
-     * 访问示例：GET /rag/ask?question=Spring AI是什么
+     * 将文本内容作为文档添加到知识库，支持元数据标记。
      *
-     * @param question 用户的问题
+     * @param request 包含文档内容和元数据的请求
+     * @return 添加结果
+     */
+    @PostMapping("/documents")
+    public Map<String, Object> addDocuments(@RequestBody AddDocumentRequest request) {
+        List<Document> documents = new ArrayList<>();
+
+        for (AddDocumentRequest.DocItem item : request.getDocuments()) {
+            // Spring AI 2.0 中 Document 使用 builder() 构建
+            Map<String, Object> metadata = new HashMap<>();
+            if (item.getSource() != null) {
+                metadata.put("source", item.getSource());
+            }
+            if (item.getType() != null) {
+                metadata.put("type", item.getType());
+            }
+            metadata.put("timestamp", System.currentTimeMillis());
+
+            Document doc = Document.builder()
+                    .text(item.getContent())
+                    .metadata(metadata)
+                    .build();
+            documents.add(doc);
+        }
+
+        ragService.addDocuments(documents);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "success");
+        result.put("addedCount", documents.size());
+        return result;
+    }
+
+    /**
+     * 使用 RAG 进行问答
+     * <p>
+     * 用户提问后，系统先从知识库检索相关内容，再让 AI 基于检索结果回答。
+     *
+     * @param question 用户问题
      * @return AI 基于知识库的回答
      */
     @GetMapping("/ask")
-    public Result<String> askWithRag(@RequestParam String question) {
-        // 构建 QuestionAnswerAdvisor：
-        // - vectorStore：指定从哪个向量存储检索
-        // - searchRequest：检索参数（topK=3 表示取最相关的3条）
-        QuestionAnswerAdvisor advisor = QuestionAnswerAdvisor.builder(ragService.getVectorStore())
-                .searchRequest(SearchRequest.builder()
-                        .topK(3)  // 检索最相关的 3 个文档片段
-                        .build())
-                .build();
-
-        // 使用 advisor 后，ChatClient 会自动：
-        // 1. 检索相关文档
-        // 2. 将文档注入 Prompt 上下文
-        // 3. 调用模型生成回答
-        String response = chatClient.prompt()
-                .user(question)
-                .advisors(advisor)
-                .call()
-                .content();
-
-        return Result.success(response);
+    public String askWithRag(@RequestParam String question) {
+        return ragService.ragChat(question);
     }
 
     /**
-     * 接口2：单独检索相关文档片段（不调用大模型）
+     * 使用 RAG 问答并返回引用来源
      * <p>
-     * 演示向量检索功能本身，可以查看检索到了哪些文档片段。
-     * 访问示例：GET /rag/search?query=Spring&topK=3
+     * 除了返回 AI 回答，还返回检索到的相关文档内容，便于验证答案来源。
+     *
+     * @param question 用户问题
+     * @return 包含回答和引用文档的结果
+     */
+    @GetMapping("/ask-with-sources")
+    public Map<String, Object> askWithSources(@RequestParam String question) {
+        RagService.RagResult result = ragService.ragChatWithSources(question);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("answer", result.answer());
+
+        List<Map<String, Object>> sources = new ArrayList<>();
+        for (Document doc : result.sourceDocuments()) {
+            Map<String, Object> source = new HashMap<>();
+            source.put("content", doc.getText().length() > 200
+                    ? doc.getText().substring(0, 200) + "..."
+                    : doc.getText());
+            source.put("metadata", doc.getMetadata());
+            sources.add(source);
+        }
+        response.put("sources", sources);
+
+        return response;
+    }
+
+    /**
+     * 执行相似度搜索（仅检索，不生成回答）
+     * <p>
+     * 用于调试和验证知识库中的内容是否正确。
      *
      * @param query 查询文本
-     * @param topK  返回条数
-     * @return 检索到的文档片段列表
+     * @param topK  返回最相似的文档数量
+     * @return 相关文档列表
      */
     @GetMapping("/search")
-    public Result<List<String>> searchDocuments(
+    public List<Map<String, Object>> similaritySearch(
             @RequestParam String query,
-            @RequestParam(defaultValue = "3") int topK) {
-        List<String> docs = ragService.searchDocuments(query, topK);
-        return Result.success("检索到 " + docs.size() + " 条相关文档", docs);
+            @RequestParam(defaultValue = "5") int topK) {
+
+        List<Document> docs = ragService.similaritySearch(query, topK);
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Document doc : docs) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("content", doc.getText());
+            item.put("metadata", doc.getMetadata());
+            result.add(item);
+        }
+
+        return result;
     }
 
     /**
-     * 接口3：对比演示 - 不使用 RAG 直接提问
+     * 初始化示例知识库数据
      * <p>
-     * 与 /rag/ask 对比，可以看到：
-     * - 不用 RAG：AI 凭自己的知识回答（可能不知道私有信息）
-     * - 用 RAG：AI 基于知识库文档回答（更准确）
-     * 访问示例：GET /rag/no-rag?question=Spring AI是什么
-     *
-     * @param question 用户的问题
-     * @return AI 凭自身知识的回答
+     * 预置一些常见问题的知识条目，方便快速体验 RAG 功能。
      */
-    @GetMapping("/no-rag")
-    public Result<String> askWithoutRag(@RequestParam String question) {
-        String response = chatClient.prompt()
-                .user(question)
-                .call()
-                .content();
-        return Result.success(response);
+    @PostMapping("/init-sample-data")
+    public Map<String, Object> initSampleData() {
+        List<Document> sampleDocs = List.of(
+                Document.builder()
+                        .text("Spring AI 是一个用于构建 AI 应用的 Java 框架，它提供了统一的 API 来对接各种 AI 模型和向量数据库。")
+                        .metadata(Map.of("source", "intro", "type", "overview"))
+                        .build(),
+                Document.builder()
+                        .text("Spring AI 2.0.0 于 2026年6月12日 正式发布，主要更新包括：ChatClient API 优化、函数调用改进、多模态支持增强等。")
+                        .metadata(Map.of("source", "changelog", "type", "version"))
+                        .build(),
+                Document.builder()
+                        .text("RAG（检索增强生成）的工作流程：1.将文档转换为向量存储 2.用户提问时检索相关文档 3.将文档作为上下文发送给 AI 4.AI 基于上下文生成回答。")
+                        .metadata(Map.of("source", "rag-guide", "type", "tutorial"))
+                        .build(),
+                Document.builder()
+                        .text("Spring AI 支持多种向量数据库：PgVector、Redis、Milvus、Elasticsearch、Neo4j、SimpleVectorStore(内存)等。")
+                        .metadata(Map.of("source", "vectordb", "type", "overview"))
+                        .build(),
+                Document.builder()
+                        .text("Spring AI 的 ChatMemory 功能支持多轮对话上下文管理，提供 MessageWindowChatMemory 实现。")
+                        .metadata(Map.of("source", "memory-guide", "type", "tutorial"))
+                        .build(),
+                Document.builder()
+                        .text("Spring AI 函数调用（Function Calling）通过 FunctionToolCallback 实现，允许 AI 模型在对话过程中调用外部工具和 API。")
+                        .metadata(Map.of("source", "function-calling", "type", "tutorial"))
+                        .build(),
+                Document.builder()
+                        .text("Spring AI 多模态功能支持同时处理文本和图片输入，通过 Media.builder() 创建媒体对象，实现图片分析、OCR 等功能。")
+                        .metadata(Map.of("source", "multimodal", "type", "tutorial"))
+                        .build(),
+                Document.builder()
+                        .text("Spring AI 结构化输出功能可以将 AI 返回的文本自动转换为 Java 对象，使用 entity() 方法支持 Bean、List、Map 等类型。")
+                        .metadata(Map.of("source", "structured-output", "type", "tutorial"))
+                        .build()
+        );
+
+        ragService.addDocuments(sampleDocs);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "success");
+        result.put("message", "示例数据已添加");
+        result.put("count", sampleDocs.size());
+        return result;
     }
 
     /**
-     * 接口4：重新加载知识库
-     * <p>
-     * 当文档更新后，可以调用此接口重新加载。
-     * 访问示例：GET /rag/reload
-     *
-     * @return 操作结果
+     * 添加文档请求 DTO
      */
-    @GetMapping("/reload")
-    public Result<String> reloadKnowledgeBase() {
-        ragService.loadDocuments();
-        return Result.success("知识库已重新加载");
+    public static class AddDocumentRequest {
+        private List<DocItem> documents;
+
+        public List<DocItem> getDocuments() { return documents; }
+        public void setDocuments(List<DocItem> documents) { this.documents = documents; }
+
+        public static class DocItem {
+            private String content;
+            private String source;
+            private String type;
+
+            public String getContent() { return content; }
+            public void setContent(String content) { this.content = content; }
+            public String getSource() { return source; }
+            public void setSource(String source) { this.source = source; }
+            public String getType() { return type; }
+            public void setType(String type) { this.type = type; }
+        }
     }
 }

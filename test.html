@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring AI 2.0 Demo - 功能测试台</title>
+<style>
+/* ========== 全局样式 ========== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  background: #f0f2f5;
+  color: #1f2937;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ========== 侧边栏 ========== */
+.sidebar {
+  width: 240px;
+  background: #1e293b;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.sidebar-header {
+  padding: 20px 18px;
+  border-bottom: 1px solid #334155;
+}
+.sidebar-header h1 {
+  font-size: 16px;
+  color: #f8fafc;
+  margin-bottom: 4px;
+}
+.sidebar-header p {
+  font-size: 12px;
+  color: #94a3b8;
+}
+.api-base {
+  padding: 14px 18px;
+  border-bottom: 1px solid #334155;
+}
+.api-base label {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+.api-base input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: "Consolas", monospace;
+}
+.api-base input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+.nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+.nav-item {
+  padding: 12px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  color: #cbd5e1;
+}
+.nav-item:hover { background: #334155; color: #fff; }
+.nav-item.active {
+  background: #334155;
+  border-left-color: #6366f1;
+  color: #fff;
+  font-weight: 500;
+}
+.nav-icon {
+  width: 20px; height: 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.sidebar-footer {
+  padding: 12px 18px;
+  border-top: 1px solid #334155;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ========== 主内容 ========== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.topbar {
+  height: 56px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+.topbar-title small {
+  font-weight: 400;
+  color: #6b7280;
+  font-size: 13px;
+  margin-left: 8px;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.status.ok { background: #dcfce7; color: #166534; }
+.status.err { background: #fee2e2; color: #991b1b; }
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ========== 通用卡片 ========== */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid #e5e7eb;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+.card-desc {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.card-title .method {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
+  font-family: "Consolas", monospace;
+}
+.method.get { background: #dbeafe; color: #1d4ed8; }
+.method.post { background: #dcfce7; color: #166534; }
+.method.delete { background: #fee2e2; color: #991b1b; }
+
+/* ========== 表单 ========== */
+.form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.form-group {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+}
+.form-group.full { flex: 1 1 100%; }
+.form-group label {
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.form-group label .required { color: #dc2626; }
+.form-group label .optional { color: #9ca3af; font-weight: 400; }
+input[type=text], input[type=number], textarea, select {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: #111827;
+  font-family: inherit;
+  transition: border 0.15s;
+}
+input[type=text]:focus, input[type=number]:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+textarea { resize: vertical; min-height: 80px; font-family: "Consolas", monospace; }
+textarea.code { font-family: "Consolas", monospace; min-height: 160px; }
+
+/* ========== 按钮 ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-primary { background: #6366f1; color: #fff; }
+.btn-primary:hover { background: #4f46e5; }
+.btn-primary:disabled { background: #a5b4fc; cursor: not-allowed; }
+.btn-secondary { background: #fff; color: #374151; border-color: #d1d5db; }
+.btn-secondary:hover { background: #f9fafb; }
+.btn-danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.btn-danger:hover { background: #fecaca; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ========== 结果区 ========== */
+.result {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: none;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.result.show { display: block; }
+.result.loading { color: #6b7280; font-style: italic; }
+.result.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.result.success { background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
+.result.info { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+.meta-info {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  font-family: "Consolas", monospace;
+}
+
+/* ========== 对话气泡 ========== */
+.chat-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: #fafafa;
+  margin-bottom: 12px;
+}
+.msg { margin-bottom: 12px; display: flex; gap: 8px; }
+.msg:last-child { margin-bottom: 0; }
+.msg-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+  color: #fff; font-weight: 600;
+}
+.msg.user .msg-avatar { background: #6366f1; }
+.msg.ai .msg-avatar { background: #10b981; }
+.msg-bubble {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 85%;
+}
+.msg.user .msg-bubble {
+  background: #6366f1; color: #fff;
+  border-top-right-radius: 2px;
+}
+.msg.ai .msg-bubble {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-top-left-radius: 2px;
+}
+.msg.system .msg-avatar { background: #f59e0b; }
+.msg.system .msg-bubble {
+  background: #fffbeb; border: 1px solid #fde68a;
+  font-size: 12px; color: #92400e;
+}
+
+/* ========== 历史管理 ========== */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.history-item {
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.history-item .text {
+  flex: 1;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-item .role {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.history-item .role.user { background: #e0e7ff; color: #3730a3; }
+.history-item .role.ai { background: #d1fae5; color: #065f46; }
+
+/* ========== 结构化表格 ========== */
+.structured-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.structured-table th, .structured-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+.structured-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #374151;
+  width: 120px;
+}
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ========== RAG 文档列表 ========== */
+.doc-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.doc-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px;
+  background: #fff;
+}
+.doc-item textarea {
+  width: 100%;
+  min-height: 60px;
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.doc-item .meta-row {
+  display: flex; gap: 6px;
+}
+.doc-item .meta-row input {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.source-card {
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #6366f1;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.source-card .src-content {
+  font-size: 13px; color: #1f2937; margin-bottom: 6px;
+}
+.source-card .src-meta {
+  font-size: 11px; color: #6b7280;
+  font-family: "Consolas", monospace;
+}
+
+/* ========== 标签页（子Tab） ========== */
+.sub-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.sub-tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+}
+.sub-tab:hover { color: #374151; }
+.sub-tab.active {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+/* ========== 滚动条美化 ========== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ========== 工具提示 ========== */
+.hint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* ========== JSON 展示 ========== */
+pre.json {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: "Consolas", monospace;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<!-- ========== 侧边栏 ========== -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>Spring AI 2.0</h1>
+    <p>功能测试控制台</p>
+  </div>
+  <div class="api-base">
+    <label>后端 API 地址</label>
+    <input type="text" id="apiBase" value="http://localhost:8080" placeholder="http://localhost:8080">
+  </div>
+  <nav class="nav" id="nav">
+    <div class="nav-item active" data-panel="chat"><span class="nav-icon">💬</span>基础聊天</div>
+    <div class="nav-item" data-panel="prompt"><span class="nav-icon">📝</span>提示词模板</div>
+    <div class="nav-item" data-panel="structured"><span class="nav-icon">🧩</span>结构化输出</div>
+    <div class="nav-item" data-panel="multimodal"><span class="nav-icon">🖼️</span>多模态</div>
+    <div class="nav-item" data-panel="function"><span class="nav-icon">🛠️</span>函数调用</div>
+    <div class="nav-item" data-panel="memory"><span class="nav-icon">🧠</span>会话记忆</div>
+    <div class="nav-item" data-panel="rag"><span class="nav-icon">📚</span>RAG 检索增强</div>
+  </nav>
+  <div class="sidebar-footer">
+    直接以 file:// 打开即可使用<br>v2.0.0 GA
+  </div>
+</aside>
+
+<!-- ========== 主内容 ========== -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">基础聊天 <small>单轮/流式/多轮对话</small></div>
+    <div class="status ok" id="statusBar">
+      <span class="status-dot"></span><span id="statusText">就绪</span>
+    </div>
+  </div>
+  <div class="content" id="content">
+    <!-- 各功能 panel 由 JS 动态渲染 -->
+  </div>
+</main>
+
+<script>
+/* ========================================================================
+ *  全局配置 & 工具函数
+ * ====================================================================== */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+function getApiBase() {
+  return $('#apiBase').value.trim().replace(/\/+$/, '');
+}
+
+function setStatus(text, ok = true) {
+  const bar = $('#statusBar');
+  const txt = $('#statusText');
+  bar.className = 'status ' + (ok ? 'ok' : 'err');
+  txt.textContent = text;
+}
+
+/**
+ * 统一请求封装
+ */
+async function request({
+  method = 'GET',
+  path,
+  params = {},
+  body = null,
+  stream = false,
+  onStreamChunk = null,
+  raw = false
+}) {
+  const base = getApiBase();
+  const url = new URL(base + path);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v != null) url.searchParams.append(k, v);
+  });
+
+  const opts = { method, headers: {} };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+
+  const startTime = Date.now();
+
+  if (stream) {
+    // SSE 流式响应
+    const resp = await fetch(url, opts);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let result = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      // Flux<String> 每个 chunk 就是一个 token，直接推送
+      if (onStreamChunk) {
+        onStreamChunk(buffer);
+        result += buffer;
+        buffer = '';
+      } else {
+        result += buffer;
+        buffer = '';
+      }
+    }
+    return { data: result, elapsed: Date.now() - startTime };
+  }
+
+  const resp = await fetch(url, opts);
+  const elapsed = Date.now() - startTime;
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${text || resp.statusText}`);
+  let data;
+  if (raw) { data = text; }
+  else {
+    try { data = JSON.parse(text); }
+    catch { data = text; }
+  }
+  return { data, elapsed };
+}
+
+/**
+ * 显示结果
+ */
+function showResult(el, content, type = 'success', meta = '') {
+  el.className = 'result show ' + type;
+  let html = '';
+  if (meta) html += `<div class="meta-info">${meta}</div>`;
+  if (typeof content === 'object' && content !== null) {
+    html += `<pre class="json">${JSON.stringify(content, null, 2)}</pre>`;
+  } else {
+    html += String(content);
+  }
+  el.innerHTML = html;
+}
+
+function showLoading(el, text = '⏳ 请求处理中，请稍候...') {
+  el.className = 'result show loading';
+  el.innerHTML = text;
+}
+
+/* ========================================================================
+ *  面板切换（主导航）
+ * ====================================================================== */
+const PANEL_META = {
+  chat: { title: '基础聊天', sub: '单轮/流式/多轮对话', render: renderChatPanel },
+  prompt: { title: '提示词模板', sub: '变量替换 / 翻译 / 代码审查 / 概念解释', render: renderPromptPanel },
+  structured: { title: '结构化输出', sub: 'Bean / Tags / 手动解析', render: renderStructuredPanel },
+  multimodal: { title: '多模态', sub: '图片理解 / 描述 / 对比', render: renderMultimodalPanel },
+  function: { title: '函数调用', sub: '天气查询 / 时间 / 订单创建', render: renderFunctionPanel },
+  memory: { title: '会话记忆', sub: '多轮上下文记忆管理', render: renderMemoryPanel },
+  rag: { title: 'RAG 检索增强', sub: '知识库 / 向量检索 / RAG 问答', render: renderRagPanel }
+};
+
+$$('#nav .nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    $$('#nav .nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    const key = item.dataset.panel;
+    const meta = PANEL_META[key];
+    $('#topbarTitle').innerHTML = meta.title + ` <small>${meta.sub}</small>`;
+    meta.render();
+  });
+});
+
+/* ========================================================================
+ *  子 Tab 切换
+ * ====================================================================== */
+function switchSubTab(root, key) {
+  $$('.sub-tab', root).forEach(t => t.classList.toggle('active', t.dataset.tab === key));
+  $$('.sub-panel', root).forEach(p => p.classList.toggle('active', p.dataset.panel === key));
+}
+
+/* ========================================================================
+ *  1. 基础聊天面板
+ * ====================================================================== */
+function renderChatPanel() {
+  const c = $('#content');
+  c.innerHTML = `
+    <div class="sub-tabs" id="chatTabs">
+      <div class="sub-tab active" data-tab="simple">简单问答</div>
+      <div class="sub-tab" data-tab="stream">流式输出</div>
+      <div class="sub-tab" data-tab="multiturn">多轮对话</div>
+      <div class="sub-tab" data-tab="system">系统提示词</div>
+      <div class="sub-tab" data-tab="fullresp">完整响应(含元数据)</div>
+    </div>
+
+    <!-- 简单问答 -->
+    <div class="sub-panel active" data-panel="simple">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/chat/simple</div>
+        <div class="card-desc">最基础的单轮问答：发送一条用户消息，获取 AI 的回复文本。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>用户消息 <span class="required">*</span></label>
+            <textarea id="chat_simple_msg" placeholder="例如：你好，请介绍一下 Spring AI">你好，请用一句话介绍 Spring AI 框架。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="chatSimple()">🚀 发送</button>
+        </div>
+        <div class="result" id="chat_simple_result"></div>
+      </div>
+    </div>
+
+    <!-- 流式输出 -->
+    <div class="sub-panel" data-panel="stream">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/chat/stream</div>
+        <div class="card-desc">流式输出：AI 生成的 token 会逐个返回，可实时看到生成过程。后端返回 Flux&lt;String&gt;。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>用户消息 <span class="required">*</span></label>
+            <textarea id="chat_stream_msg" placeholder="输入问题...">请用 300 字介绍 Spring Boot 的核心设计思想。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="chat_stream_btn" onclick="chatStream()">🚀 流式请求</button>
+          <button class="btn btn-secondary" onclick="clearResult('chat_stream_result')">清空</button>
+        </div>
+        <div class="result" id="chat_stream_result"></div>
+      </div>
+    </div>
+
+    <!-- 多轮对话 -->
+    <div class="sub-panel" data-panel="multiturn">
+      <div class="card">
+        <div class="card-title"><span class="method post">POST</span>/api/chat/multi-turn</div>
+        <div class="card-desc">多轮对话：通过传入历史消息列表，让 AI 理解上下文。下面可逐步添加历史消息。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>历史对话（点击添加）</label>
+            <div class="history-list" id="chat_multi_history"></div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="chat_multi_role" style="flex:0 0 100px;">
+                <option value="user">用户</option>
+                <option value="ai">AI</option>
+              </select>
+              <input type="text" id="chat_multi_new" placeholder="输入消息后点击 + 添加" style="flex:1;">
+              <button class="btn btn-secondary btn-sm" onclick="addMultiTurnHistory()">+ 添加</button>
+              <button class="btn btn-danger btn-sm" onclick="clearMultiTurnHistory()">清空</button>
+            </div>
+            <div class="hint">提示：先添加若干历史对话，再输入当前消息发送。</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>当前用户消息 <span class="required">*</span></label>
+            <textarea id="chat_multi_msg" placeholder="当前这一轮的问题">那它和 Spring Framework 是什么关系？</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="chatMultiTurn()">🚀 发送（含历史）</button>
+        </div>
+        <div class="result" id="chat_multi_result"></div>
+      </div>
+    </div>
+
+    <!-- 系统提示词 -->
+    <div class="sub-panel" data-panel="system">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/chat/with-system</div>
+        <div class="card-desc">设定系统提示词来定义 AI 的角色和行为。例如：翻译专家、代码审查专家、面试官等。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>系统提示词 (System Prompt)</label>
+            <textarea id="chat_system_prompt" placeholder="定义 AI 的角色...">你是一位资深的 Java 架构师，请用专业而简洁的方式回答问题，并尽量给出代码示例。</textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>用户消息 <span class="required">*</span></label>
+            <textarea id="chat_system_msg">如何设计一个高并发的订单系统？请给出核心代码示例。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="chatWithSystem()">🚀 发送</button>
+        </div>
+        <div class="result" id="chat_system_result"></div>
+      </div>
+    </div>
+
+    <!-- 完整响应 -->
+    <div class="sub-panel" data-panel="fullresp">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/chat/response</div>
+        <div class="card-desc">获取完整 ChatResponse，包含 AI 回复内容、token 用量、模型信息等元数据。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>用户消息 <span class="required">*</span></label>
+            <input type="text" id="chat_resp_msg" value="写一首关于春天的五言绝句。">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="chatFullResponse()">🚀 请求</button>
+        </div>
+        <div class="result" id="chat_resp_result"></div>
+      </div>
+    </div>
+  `;
+
+  // 子Tab
+  $$('#chatTabs .sub-tab').forEach(t => {
+    t.onclick = () => switchSubTab(c, t.dataset.tab);
+  });
+
+  // 预置一条多轮历史
+  addMultiTurnHistory(true, 'user', '请介绍一下 Spring Boot。');
+  addMultiTurnHistory(true, 'ai', 'Spring Boot 是基于 Spring Framework 的快速开发脚手架，通过约定大于配置的理念，让你可以一行代码启动一个完整的 Spring 应用。');
+}
+
+/* ---------- 聊天接口实现 ---------- */
+async function chatSimple() {
+  const msg = $('#chat_simple_msg').value.trim();
+  if (!msg) return alert('请输入用户消息');
+  const r = $('#chat_simple_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...', true);
+    const { data, elapsed } = await request({ path: '/api/chat/simple', params: { message: msg }, raw: true });
+    showResult(r, data, 'success', `⏱️ 耗时 ${elapsed}ms  ·  GET /api/chat/simple`);
+    setStatus('成功', true);
+  } catch (e) {
+    showResult(r, '❌ ' + e.message, 'error');
+    setStatus('失败', false);
+  }
+}
+
+async function chatStream() {
+  const msg = $('#chat_stream_msg').value.trim();
+  if (!msg) return alert('请输入用户消息');
+  const r = $('#chat_stream_result');
+  const btn = $('#chat_stream_btn');
+  try {
+    r.className = 'result show';
+    r.innerHTML = `<div class="meta-info">⏳ 流式接收中...  ·  GET /api/chat/stream</div><div id="chat_stream_content"></div>`;
+    btn.disabled = true;
+    setStatus('流式传输中...', true);
+    const content = $('#chat_stream_content');
+    let full = '';
+    await request({
+      path: '/api/chat/stream',
+      params: { message: msg },
+      stream: true,
+      onStreamChunk: (chunk) => {
+        full += chunk;
+        content.textContent = full;
+      }
+    });
+    const meta = r.querySelector('.meta-info');
+    meta.innerHTML = `✅ 完成  ·  GET /api/chat/stream  ·  共 ${full.length} 字符`;
+    setStatus('流式完成', true);
+  } catch (e) {
+    showResult(r, '❌ ' + e.message, 'error');
+    setStatus('失败', false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* 多轮对话历史管理 */
+let multiTurnHistory = [];
+function addMultiTurnHistory(silent = false, role = null, text = null) {
+  if (!silent) {
+    role = $('#chat_multi_role').value;
+    text = $('#chat_multi_new').value.trim();
+    if (!text) return;
+    $('#chat_multi_new').value = '';
+  }
+  multiTurnHistory.push({ role, text });
+  const box = $('#chat_multi_history');
+  if (box) {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `
+      <span class="role ${role}">${role === 'user' ? '用户' : 'AI'}</span>
+      <span class="text">${escapeHtml(text)}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeMultiTurn(${multiTurnHistory.length - 1}, this)">×</button>
+    `;
+    box.appendChild(div);
+  }
+}
+function removeMultiTurn(idx, el) {
+  multiTurnHistory.splice(idx, 1);
+  el.parentElement.remove();
+}
+function clearMultiTurnHistory() {
+  multiTurnHistory = [];
+  const box = $('#chat_multi_history');
+  if (box) box.innerHTML = '';
+}
+async function chatMultiTurn() {
+  const msg = $('#chat_multi_msg').value.trim();
+  if (!msg) return alert('请输入当前消息');
+  const r = $('#chat_multi_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...', true);
+    const history = multiTurnHistory.map(h => `[${h.role}] ${h.text}`);
+    const { data, elapsed } = await request({
+      method: 'POST',
+      path: '/api/chat/multi-turn',
+      body: { message: msg, history }
+    });
+    // 把本轮对话也追加到历史
+    addMultiTurnHistory(true, 'user', msg);
+    addMultiTurnHistory(true, 'ai', typeof data === 'string' ? data : JSON.stringify(data));
+    showResult(r, data, 'success', `⏱️ 耗时 ${elapsed}ms  ·  POST /api/chat/multi-turn  ·  历史 ${history.length} 条`);
+    setStatus('成功', true);
+  } catch (e) {
+    showResult(r, '❌ ' + e.message, 'error');
+    setStatus('失败', false);
+  }
+}
+
+async function chatWithSystem() {
+  const msg = $('#chat_system_msg').value.trim();
+  const sys = $('#chat_system_prompt').value.trim();
+  if (!msg) return alert('请输入用户消息');
+  const r = $('#chat_system_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...', true);
+    const { data, elapsed } = await request({
+      path: '/api/chat/with-system',
+      params: { message: msg, systemPrompt: sys },
+      raw: true
+    });
+    showResult(r, data, 'success', `⏱️ 耗时 ${elapsed}ms  ·  GET /api/chat/with-system  ·  系统词 ${sys.length} 字`);
+    setStatus('成功', true);
+  } catch (e) {
+    showResult(r, '❌ ' + e.message, 'error');
+    setStatus('失败', false);
+  }
+}
+
+async function chatFullResponse() {
+  const msg = $('#chat_resp_msg').value.trim();
+  if (!msg) return alert('请输入用户消息');
+  const r = $('#chat_resp_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...', true);
+    const { data, elapsed } = await request({ path: '/api/chat/response', params: { message: msg } });
+    showResult(r, data, 'success', `⏱️ 耗时 ${elapsed}ms  ·  GET /api/chat/response`);
+    setStatus('成功', true);
+  } catch (e) {
+    showResult(r, '❌ ' + e.message, 'error');
+    setStatus('失败', false);
+  }
+}
+
+function clearResult(id) {
+  const el = document.getElementById(id);
+  if (el) { el.className = 'result'; el.innerHTML = ''; }
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// 先渲染默认面板
+renderChatPanel();
+
+/* ========================================================================
+ *  2. 提示词模板面板
+ * ======================================================================== */
+function renderPromptPanel() {
+  const c = $('#content');
+  c.innerHTML = `
+    <div class="sub-tabs" id="promptTabs">
+      <div class="sub-tab active" data-tab="template">变量模板</div>
+      <div class="sub-tab" data-tab="translate">翻译助手</div>
+      <div class="sub-tab" data-tab="codereview">代码审查</div>
+      <div class="sub-tab" data-tab="explain">概念解释</div>
+    </div>
+
+    <!-- 变量模板 -->
+    <div class="sub-panel active" data-panel="template">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/prompt/template</div>
+        <div class="card-desc">通过内联模板 + param() 实现变量替换。系统提示词格式：<code>你是一个{role}。请帮我完成以下任务：{task}</code></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>角色 (role) <span class="required">*</span></label>
+            <input type="text" id="p_tpl_role" value="专业的技术写作者">
+          </div>
+          <div class="form-group full">
+            <label>任务 (task) <span class="required">*</span></label>
+            <textarea id="p_tpl_task" placeholder="描述任务...">写一篇 300 字的短文，介绍微服务架构的优缺点，并给出选型建议。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="promptTemplate()">🚀 生成</button>
+        </div>
+        <div class="result" id="p_tpl_result"></div>
+      </div>
+    </div>
+
+    <!-- 翻译助手 -->
+    <div class="sub-panel" data-panel="translate">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/prompt/translate</div>
+        <div class="card-desc">专业翻译：支持指定目标语言和翻译风格（正式、口语、文学等）。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>目标语言</label>
+            <input type="text" id="p_tr_lang" value="英文">
+          </div>
+          <div class="form-group">
+            <label>翻译风格</label>
+            <select id="p_tr_style">
+              <option value="正式">正式</option>
+              <option value="口语化">口语化</option>
+              <option value="文学化">文学化</option>
+              <option value="商务">商务</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>待翻译文本 <span class="required">*</span></label>
+            <textarea id="p_tr_text">Spring AI 是一个面向 Java 开发者的应用开发框架，旨在简化包含人工智能功能的应用程序的开发。它提供了一组简洁而全面的抽象，用于构建 AI 驱动的应用。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="promptTranslate()">🚀 翻译</button>
+        </div>
+        <div class="result" id="p_tr_result"></div>
+      </div>
+    </div>
+
+    <!-- 代码审查 -->
+    <div class="sub-panel" data-panel="codereview">
+      <div class="card">
+        <div class="card-title"><span class="method post">POST</span>/api/prompt/code-review</div>
+        <div class="card-desc">代码审查助手：从代码质量、Bug/安全、性能优化、最佳实践四个维度给出专业建议。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>待审查代码 <span class="required">*</span></label>
+            <textarea class="code" id="p_cr_code">public class UserService {
+    private static Map<String, User> cache = new HashMap<>();
+
+    public User findById(String id) {
+        if (id == null) {
+            System.out.println("id is null");
+        }
+        return cache.get(id);
+    }
+
+    public void addUser(User user) {
+        String id = user.getId();
+        cache.put(id, user);
+        // TODO: 保存到数据库
+    }
+}</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="promptCodeReview()">🚀 审查</button>
+        </div>
+        <div class="result" id="p_cr_result"></div>
+      </div>
+    </div>
+
+    <!-- 概念解释 -->
+    <div class="sub-panel" data-panel="explain">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/prompt/explain</div>
+        <div class="card-desc">学习助手：根据指定的技能水平（初学者/中级/专家）用不同深度解释技术概念。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>概念 (concept) <span class="required">*</span></label>
+            <input type="text" id="p_exp_concept" value="RAG 检索增强生成">
+          </div>
+          <div class="form-group">
+            <label>理解水平</label>
+            <select id="p_exp_level">
+              <option value="初学者">初学者</option>
+              <option value="中级开发者">中级开发者</option>
+              <option value="技术专家">技术专家</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="promptExplain()">🚀 解释</button>
+        </div>
+        <div class="result" id="p_exp_result"></div>
+      </div>
+    </div>
+  `;
+  $$('#promptTabs .sub-tab').forEach(t => t.onclick = () => switchSubTab(c, t.dataset.tab));
+}
+
+async function promptTemplate() {
+  const role = $('#p_tpl_role').value.trim();
+  const task = $('#p_tpl_task').value.trim();
+  if (!role || !task) return alert('请填写角色和任务');
+  const r = $('#p_tpl_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/prompt/template', params: { role, task }, raw: true });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  role=${role}`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+async function promptTranslate() {
+  const text = $('#p_tr_text').value.trim();
+  const lang = $('#p_tr_lang').value.trim();
+  const style = $('#p_tr_style').value;
+  if (!text) return alert('请输入待翻译文本');
+  const r = $('#p_tr_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/prompt/translate', params: { text, targetLanguage: lang, style }, raw: true });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  目标语言=${lang}  ·  风格=${style}`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+async function promptCodeReview() {
+  const code = $('#p_cr_code').value;
+  if (!code.trim()) return alert('请输入代码');
+  const r = $('#p_cr_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...');
+    const { data, elapsed } = await request({ method: 'POST', path: '/api/prompt/code-review', body: { code }, raw: true });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  代码 ${code.length} 字`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+async function promptExplain() {
+  const concept = $('#p_exp_concept').value.trim();
+  const level = $('#p_exp_level').value;
+  if (!concept) return alert('请输入概念');
+  const r = $('#p_exp_result');
+  try {
+    showLoading(r);
+    setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/prompt/explain', params: { concept, level }, raw: true });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  水平=${level}`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+/* ========================================================================
+ *  3. 结构化输出面板
+ * ======================================================================== */
+function renderStructuredPanel() {
+  const c = $('#content');
+  c.innerHTML = `
+    <div class="sub-tabs" id="structTabs">
+      <div class="sub-tab active" data-tab="bean">人物信息提取 (Bean)</div>
+      <div class="sub-tab" data-tab="tags">关键词标签 (List)</div>
+      <div class="sub-tab" data-tab="manual">手动解析原始 JSON</div>
+    </div>
+
+    <div class="sub-panel active" data-panel="bean">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/structured/bean</div>
+        <div class="card-desc">从文本中自动提取人物信息，并封装为 Person 对象（name / age / email）返回 JSON。使用 entity(Person.class) 实现。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>包含人物信息的文本 <span class="required">*</span></label>
+            <textarea id="s_bean_text" rows="6">我叫李明，今年32岁，我的邮箱是 liming2024@techcorp.com。我在一家互联网公司担任高级工程师，平时喜欢研究人工智能。我的同事王芳，28岁，她的邮箱地址是 wangfang@example.org。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="structBean()">🚀 提取</button>
+        </div>
+        <div class="result" id="s_bean_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="tags">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/structured/tags</div>
+        <div class="card-desc">为一段内容生成 3-5 个关键词标签，返回 JSON 数组。使用 entity(ParameterizedTypeReference&lt;List&lt;String&gt;&gt;) 实现。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>内容文本 <span class="required">*</span></label>
+            <textarea id="s_tags_content" rows="6">Spring Boot 3.0 基于 Spring Framework 6.0，要求 JDK 17+，支持 GraalVM 原生镜像，全面整合虚拟线程（Project Loom），提升 Java 应用的并发性能与资源利用率。它还支持 AOT 预处理编译，可以显著加快应用启动速度，非常适合云原生和 Serverless 场景。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="structTags()">🏷️ 生成标签</button>
+        </div>
+        <div class="result" id="s_tags_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="manual">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/structured/manual-parse</div>
+        <div class="card-desc">获取 AI 生成的原始 JSON 文本，返回 { raw: "..." }，便于调试解析逻辑。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>待提取信息的文本 <span class="required">*</span></label>
+            <textarea id="s_manual_text" rows="5">我公司的地址是北京市朝阳区建国路88号，联系电话是010-88889999，主营业务包括软件开发、系统集成和技术咨询，员工人数约200人。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="structManual()">🔍 提取（原始）</button>
+        </div>
+        <div class="result" id="s_manual_result"></div>
+      </div>
+    </div>
+  `;
+  $$('#structTabs .sub-tab').forEach(t => t.onclick = () => switchSubTab(c, t.dataset.tab));
+}
+
+async function structBean() {
+  const text = $('#s_bean_text').value.trim();
+  if (!text) return alert('请输入文本');
+  const r = $('#s_bean_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/structured/bean', params: { text } });
+    // 以表格展示
+    let html = `<div class="meta-info">⏱️ ${elapsed}ms  ·  Person 对象</div>`;
+    html += `<table class="structured-table">
+      <tr><th>姓名 name</th><td>${escapeHtml(data?.name ?? '—')}</td></tr>
+      <tr><th>年龄 age</th><td>${escapeHtml(String(data?.age ?? '—'))}</td></tr>
+      <tr><th>邮箱 email</th><td>${escapeHtml(data?.email ?? '—')}</td></tr>
+    </table>`;
+    html += `<div style="margin-top:12px;"><details><summary style="cursor:pointer;font-size:12px;color:#6b7280;">查看原始 JSON</summary><pre class="json" style="margin-top:8px;">${JSON.stringify(data, null, 2)}</pre></details></div>`;
+    r.className = 'result show success';
+    r.innerHTML = html;
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function structTags() {
+  const content = $('#s_tags_content').value.trim();
+  if (!content) return alert('请输入内容');
+  const r = $('#s_tags_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/structured/tags', params: { content } });
+    let html = `<div class="meta-info">⏱️ ${elapsed}ms  ·  返回 ${Array.isArray(data) ? data.length : 0} 个标签</div>`;
+    html += `<div class="tag-list">`;
+    (Array.isArray(data) ? data : []).forEach(tag => {
+      html += `<span class="tag">#${escapeHtml(tag)}</span>`;
+    });
+    html += `</div>`;
+    html += `<div style="margin-top:12px;"><details><summary style="cursor:pointer;font-size:12px;color:#6b7280;">查看原始 JSON</summary><pre class="json" style="margin-top:8px;">${JSON.stringify(data, null, 2)}</pre></details></div>`;
+    r.className = 'result show success';
+    r.innerHTML = html;
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function structManual() {
+  const text = $('#s_manual_text').value.trim();
+  if (!text) return alert('请输入文本');
+  const r = $('#s_manual_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/structured/manual-parse', params: { text } });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  原始 JSON 文本`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+/* ========================================================================
+ *  4. 多模态面板
+ * ======================================================================== */
+function renderMultimodalPanel() {
+  const c = $('#content');
+  const sampleImg1 = 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/1280px-Camponotus_flavomarginatus_ant.jpg';
+  const sampleImg2 = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/640px-PNG_transparency_demonstration_1.png';
+  c.innerHTML = `
+    <div class="sub-tabs" id="mmTabs">
+      <div class="sub-tab active" data-tab="analyze">图片问答</div>
+      <div class="sub-tab" data-tab="describe">图片详细描述</div>
+      <div class="sub-tab" data-tab="compare">双图对比</div>
+      <div class="sub-tab" data-tab="info">支持格式</div>
+    </div>
+
+    <div class="sub-panel active" data-panel="analyze">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/multimodal/analyze</div>
+        <div class="card-desc">传入图片 URL 和问题，AI 分析图片并回答。后端使用 Media.builder() + user(u -> u.media(...)) 构建多模态消息。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>图片 URL <span class="required">*</span></label>
+            <input type="text" id="m_ana_url" value="${sampleImg1}">
+            <div class="hint">🔔 注意：图片需是公开可访问的 URL（JPG/PNG/WebP/GIF 均可），模型服务端需要能访问此地址。</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>关于图片的问题</label>
+            <textarea id="m_ana_q">这张图片里有什么？请详细描述主要物体、颜色和环境。</textarea>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="mmAnalyze()">🚀 分析图片</button>
+          <button class="btn btn-secondary btn-sm" onclick="previewImage('m_ana_url')">👁️ 预览图片</button>
+        </div>
+        <div id="m_ana_preview" style="margin-top:10px;"></div>
+        <div class="result" id="m_ana_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="describe">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/multimodal/describe</div>
+        <div class="card-desc">详细描述图片内容，包括：图片中有什么、场景是什么、可能的用途。</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>图片 URL <span class="required">*</span></label>
+            <input type="text" id="m_desc_url" value="${sampleImg2}">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="mmDescribe()">📝 生成描述</button>
+          <button class="btn btn-secondary btn-sm" onclick="previewImage('m_desc_url')">👁️ 预览图片</button>
+        </div>
+        <div id="m_desc_preview" style="margin-top:10px;"></div>
+        <div class="result" id="m_desc_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="compare">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/multimodal/compare</div>
+        <div class="card-desc">同时分析两张图片并进行对比。可以问"两张图片的区别"、"哪个更适合做头像"等问题。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>图片 1 URL <span class="required">*</span></label>
+            <input type="text" id="m_cmp_url1" value="${sampleImg1}">
+          </div>
+          <div class="form-group">
+            <label>图片 2 URL <span class="required">*</span></label>
+            <input type="text" id="m_cmp_url2" value="${sampleImg2}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>对比问题</label>
+            <input type="text" id="m_cmp_q" value="请对比这两张图片的异同点。">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="mmCompare()">⚖️ 对比分析</button>
+          <button class="btn btn-secondary btn-sm" onclick="previewImage('m_cmp_url1', 'm_cmp_pv1'); previewImage('m_cmp_url2', 'm_cmp_pv2');">👁️ 预览两张</button>
+        </div>
+        <div id="m_cmp_pv" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+          <div id="m_cmp_pv1" style="flex:1;min-width:200px;"></div>
+          <div id="m_cmp_pv2" style="flex:1;min-width:200px;"></div>
+        </div>
+        <div class="result" id="m_cmp_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="info">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/multimodal/supported-formats</div>
+        <div class="card-desc">查询当前接口声明支持的图片格式列表。</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="mmFormats()">📋 查询支持格式</button>
+        </div>
+        <div class="result" id="m_fmt_result"></div>
+      </div>
+    </div>
+  `;
+  $$('#mmTabs .sub-tab').forEach(t => t.onclick = () => switchSubTab(c, t.dataset.tab));
+}
+
+function previewImage(inputId, targetId) {
+  const url = $('#' + inputId).value.trim();
+  const target = targetId ? $('#' + targetId) : $('#' + inputId.replace('_url', '_preview'));
+  if (!url || !target) return;
+  target.innerHTML = `<div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px;background:#fafafa;"><img src="${escapeHtml(url)}" style="max-width:100%;max-height:240px;display:block;margin:auto;border-radius:4px;" onerror="this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#991b1b;font-size:12px;\\'>❌ 图片加载失败，请检查 URL 是否可访问</div>'"><div style="text-align:center;font-size:11px;color:#6b7280;margin-top:6px;word-break:break-all;">${escapeHtml(url)}</div></div>`;
+}
+
+async function mmAnalyze() {
+  const url = $('#m_ana_url').value.trim();
+  const q = $('#m_ana_q').value.trim();
+  if (!url) return alert('请输入图片 URL');
+  const r = $('#m_ana_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/multimodal/analyze', params: { imageUrl: url, question: q }, raw: true });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  GET /api/multimodal/analyze`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function mmDescribe() {
+  const url = $('#m_desc_url').value.trim();
+  if (!url) return alert('请输入图片 URL');
+  const r = $('#m_desc_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/multimodal/describe', params: { imageUrl: url }, raw: true });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  GET /api/multimodal/describe`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function mmCompare() {
+  const u1 = $('#m_cmp_url1').value.trim();
+  const u2 = $('#m_cmp_url2').value.trim();
+  const q = $('#m_cmp_q').value.trim();
+  if (!u1 || !u2) return alert('请填写两张图片的 URL');
+  const r = $('#m_cmp_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/multimodal/compare', params: { imageUrl1: u1, imageUrl2: u2, question: q }, raw: true });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  GET /api/multimodal/compare`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function mmFormats() {
+  const r = $('#m_fmt_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/multimodal/supported-formats' });
+    let html = `<div class="meta-info">⏱️ ${elapsed}ms</div><div class="tag-list">`;
+    (Array.isArray(data) ? data : []).forEach(f => html += `<span class="tag">${escapeHtml(f)}</span>`);
+    html += `</div>`;
+    r.className = 'result show success';
+    r.innerHTML = html;
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+/* ========================================================================
+ *  5. 函数调用面板
+ * ======================================================================== */
+function renderFunctionPanel() {
+  const c = $('#content');
+  c.innerHTML = `
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🤖 函数调用对话 <span class="method get">GET</span>/api/function/chat</div>
+      <div class="card-desc">
+        后端注册了 3 个工具函数，AI 会根据你的问题自动判断是否调用工具。可直接用自然语言提问，比如：
+        <code style="display:inline-block;margin:4px 4px 0;padding:2px 6px;background:#eef2ff;color:#3730a3;border-radius:4px;">"北京天气怎么样？"</code>
+        <code style="display:inline-block;margin:4px 4px 0;padding:2px 6px;background:#eef2ff;color:#3730a3;border-radius:4px;">"现在几点了？"</code>
+        <code style="display:inline-block;margin:4px 4px 0;padding:2px 6px;background:#eef2ff;color:#3730a3;border-radius:4px;">"帮我创建一个订单，商品是 MacBook Pro，数量 2 台"</code>
+      </div>
+      <div class="chat-box" id="f_chat_box"></div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>你的问题 <span class="required">*</span></label>
+          <input type="text" id="f_msg" placeholder="用自然语言问一个问题，例如：上海今天的天气如何？" value="北京的天气怎么样？">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="f_send_btn" onclick="funcChatSend()">🚀 发送</button>
+        <button class="btn btn-secondary btn-sm" onclick="funcQuick('北京天气怎么样？')">天气</button>
+        <button class="btn btn-secondary btn-sm" onclick="funcQuick('现在的具体时间是？')">时间</button>
+        <button class="btn btn-secondary btn-sm" onclick="funcQuick('帮我创建一个订单：商品 iPhone 16，数量 1')">下单</button>
+        <button class="btn btn-danger btn-sm" onclick="clearFuncChat()">清空对话</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧰 可用工具列表 <span class="method get">GET</span>/api/function/available-tools</div>
+      <div class="card-desc">查看后端当前注册的工具函数及说明。</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="funcTools()">🔄 刷新工具列表</button>
+      </div>
+      <div class="result" id="f_tools_result"></div>
+    </div>
+  `;
+  // 初始化一个系统提示气泡
+  appendFuncMsg('system', '我是一个可以调用工具的助手。你可以问我天气、时间，或者让我帮你创建订单。');
+}
+
+function appendFuncMsg(role, text) {
+  const box = $('#f_chat_box');
+  if (!box) return;
+  const label = role === 'user' ? 'U' : (role === 'ai' ? 'AI' : 'S');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `
+    <div class="msg-avatar">${label}</div>
+    <div class="msg-bubble"></div>
+  `;
+  div.querySelector('.msg-bubble').textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function funcQuick(text) {
+  $('#f_msg').value = text;
+  funcChatSend();
+}
+function clearFuncChat() {
+  const box = $('#f_chat_box');
+  if (box) box.innerHTML = '';
+  appendFuncMsg('system', '对话已清空，重新开始吧～');
+}
+
+async function funcChatSend() {
+  const msg = $('#f_msg').value.trim();
+  if (!msg) return alert('请输入问题');
+  appendFuncMsg('user', msg);
+  $('#f_msg').value = '';
+  const btn = $('#f_send_btn');
+  try {
+    btn.disabled = true;
+    setStatus('调用工具中...');
+    // 追加一个临时 AI 气泡 + 显示 loading
+    const label = 'AI';
+    const box = $('#f_chat_box');
+    const div = document.createElement('div');
+    div.className = 'msg ai';
+    div.innerHTML = `<div class="msg-avatar">${label}</div><div class="msg-bubble">⏳ 思考中...</div>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    const bubble = div.querySelector('.msg-bubble');
+
+    const { data, elapsed } = await request({ path: '/api/function/chat', params: { message: msg }, raw: true });
+    bubble.textContent = data;
+    bubble.title = `耗时 ${elapsed}ms`;
+    setStatus('成功');
+  } catch (e) {
+    appendFuncMsg('system', '❌ 出错：' + e.message);
+    setStatus('失败', false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function funcTools() {
+  const r = $('#f_tools_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/function/available-tools' });
+    let html = `<div class="meta-info">⏱️ ${elapsed}ms</div><ul style="list-style:none;">`;
+    (Array.isArray(data) ? data : []).forEach(t => {
+      const split = t.split(' - ');
+      html += `<li style="padding:6px 10px;border-bottom:1px solid #e5e7eb;"><strong style="font-family:Consolas,monospace;color:#3730a3;">${escapeHtml(split[0])}</strong> <span style="color:#6b7280;">— ${escapeHtml(split[1] ?? '')}</span></li>`;
+    });
+    html += `</ul>`;
+    r.className = 'result show success';
+    r.innerHTML = html;
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+/* ========================================================================
+ *  6. 会话记忆面板
+ * ======================================================================== */
+function renderMemoryPanel() {
+  const c = $('#content');
+  c.innerHTML = `
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">🧠 带记忆的多轮对话 <span class="method get">GET</span>/api/memory/chat</div>
+      <div class="card-desc">
+        通过 MessageChatMemoryAdvisor 实现会话记忆。相同 sessionId 的请求会自动共享上下文。
+        后端使用 MessageWindowChatMemory + InMemoryChatMemoryRepository（内存存储，重启后丢失）。
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 260px;">
+          <label>会话 ID (sessionId) <span class="required">*</span></label>
+          <input type="text" id="mem_sid" value="demo-session-001">
+          <div class="hint">相同 ID 的对话会记住历史</div>
+        </div>
+        <div class="form-group">
+          <label>系统提示词 <span class="optional">（可选）</span></label>
+          <input type="text" id="mem_sys" value="你是一个友好的助手，能够记住之前的对话上下文。" placeholder="留空则使用默认">
+        </div>
+        <div class="form-group" style="flex:0 0 auto;align-self:flex-end;">
+          <button class="btn btn-danger" onclick="memClear()">🗑️ 清除此会话记忆</button>
+        </div>
+      </div>
+      <div class="chat-box" id="mem_chat"></div>
+      <div class="form-row">
+        <div class="form-group full">
+          <label>你的消息 <span class="required">*</span></label>
+          <input type="text" id="mem_msg" placeholder="先问一个问题，接着再问相关的继续问题..." value="我叫小明，是一名 Java 后端开发工程师。">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="mem_send" onclick="memSend()">🚀 发送（带记忆）</button>
+        <button class="btn btn-secondary btn-sm" onclick="memQuick('请问我叫什么名字？')">测试：我叫什么？</button>
+        <button class="btn btn-secondary btn-sm" onclick="memQuick('我是做什么的？')">测试：我的职业？</button>
+        <button class="btn btn-danger btn-sm" onclick="clearMemChat()">清空界面聊天</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">ℹ️ 记忆实现信息 <span class="method get">GET</span>/api/memory/info</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="memInfo()">🔄 获取实现信息</button>
+      </div>
+      <div class="result" id="mem_info_result"></div>
+    </div>
+  `;
+  appendMemMsg('system', '开始新对话：先发一条关于你自己的信息，然后问一个相关问题来测试记忆。');
+}
+
+function appendMemMsg(role, text) {
+  const box = $('#mem_chat'); if (!box) return;
+  const label = role === 'user' ? 'U' : (role === 'ai' ? 'AI' : 'S');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `<div class="msg-avatar">${label}</div><div class="msg-bubble"></div>`;
+  div.querySelector('.msg-bubble').textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function clearMemChat() {
+  const box = $('#mem_chat'); if (!box) return;
+  box.innerHTML = '';
+  appendMemMsg('system', '（界面聊天已清空，会话记忆仍在服务端保留中，如需清除请点击"清除此会话记忆"）');
+}
+function memQuick(t) { $('#mem_msg').value = t; memSend(); }
+
+async function memSend() {
+  const sid = $('#mem_sid').value.trim();
+  const message = $('#mem_msg').value.trim();
+  const sys = $('#mem_sys').value.trim();
+  if (!sid || !message) return alert('请填写会话 ID 和消息');
+  appendMemMsg('user', message);
+  $('#mem_msg').value = '';
+  const btn = $('#mem_send');
+  try {
+    btn.disabled = true;
+    setStatus('记忆请求中...');
+    // 添加 AI 气泡 loading
+    const box = $('#mem_chat');
+    const div = document.createElement('div');
+    div.className = 'msg ai';
+    div.innerHTML = `<div class="msg-avatar">AI</div><div class="msg-bubble">⏳ 思考中...</div>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    const bubble = div.querySelector('.msg-bubble');
+
+    const params = { sessionId: sid, message };
+    const path = sys ? '/api/memory/chat-with-system' : '/api/memory/chat';
+    if (sys) params.systemPrompt = sys;
+
+    const { data, elapsed } = await request({ path, params, raw: true });
+    bubble.textContent = data;
+    bubble.title = `耗时 ${elapsed}ms · session=${sid}`;
+    setStatus('成功');
+  } catch (e) {
+    appendMemMsg('system', '❌ 出错：' + e.message);
+    setStatus('失败', false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function memClear() {
+  const sid = $('#mem_sid').value.trim();
+  if (!sid) return alert('请输入要清除的 sessionId');
+  if (!confirm(`确认清除会话「${sid}」的所有服务端记忆？`)) return;
+  try {
+    setStatus('清除中...');
+    const { data, elapsed } = await request({ method: 'DELETE', path: '/api/memory/clear', params: { sessionId: sid }, raw: true });
+    appendMemMsg('system', '✅ ' + data + `（耗时 ${elapsed}ms）`);
+    setStatus('记忆已清除');
+  } catch (e) {
+    appendMemMsg('system', '❌ 清除失败：' + e.message);
+    setStatus('失败', false);
+  }
+}
+
+async function memInfo() {
+  const r = $('#mem_info_result');
+  try {
+    showLoading(r); setStatus('请求中...');
+    const { data, elapsed } = await request({ path: '/api/memory/info', raw: true });
+    showResult(r, data, 'info', `⏱️ ${elapsed}ms`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+/* ========================================================================
+ *  7. RAG 检索增强面板
+ * ======================================================================== */
+function renderRagPanel() {
+  const c = $('#content');
+  c.innerHTML = `
+    <div class="sub-tabs" id="ragTabs">
+      <div class="sub-tab active" data-tab="ask">RAG 问答</div>
+      <div class="sub-tab" data-tab="docs">知识库管理</div>
+      <div class="sub-tab" data-tab="search">相似度搜索</div>
+      <div class="sub-tab" data-tab="init">初始化示例数据</div>
+    </div>
+
+    <div class="sub-panel active" data-panel="ask">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/rag/ask · /ask-with-sources</div>
+        <div class="card-desc">
+          RAG 问答：先从知识库向量检索相关文档，再将文档作为上下文注入 Prompt，让 AI 基于知识回答。
+          <strong style="color:#dc2626;">如果还没添加过知识库，请先到「初始化示例数据」Tab 加载预置数据。</strong>
+        </div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>你的问题 <span class="required">*</span></label>
+            <input type="text" id="r_ask_q" value="Spring AI 2.0.0 是什么时候发布的？主要更新有哪些？">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:0 0 auto;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="r_ask_src" checked> 同时返回引用来源
+            </label>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="ragAsk()">📚 基于知识库问答</button>
+        </div>
+        <div class="result" id="r_ask_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="docs">
+      <div class="card">
+        <div class="card-title"><span class="method post">POST</span>/api/rag/documents</div>
+        <div class="card-desc">向知识库添加自定义文档，每条文档包含 content（内容）、可选 source（来源）和 type（类型）。添加后会自动向量化并存储。</div>
+        <div id="r_doc_list" class="doc-list"></div>
+        <div class="btn-row" style="margin-bottom:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="ragAddDocRow()">+ 添加文档行</button>
+          <button class="btn btn-danger btn-sm" onclick="ragClearDocs()">清空全部</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="ragSubmitDocs()">💾 提交到知识库</button>
+        </div>
+        <div class="result" id="r_docs_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="search">
+      <div class="card">
+        <div class="card-title"><span class="method get">GET</span>/api/rag/search</div>
+        <div class="card-desc">仅执行向量相似度检索，不调用 AI 生成回答。用于验证知识库中的内容是否被正确匹配。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>查询文本 <span class="required">*</span></label>
+            <input type="text" id="r_search_q" value="Spring AI RAG 工作流程">
+          </div>
+          <div class="form-group" style="flex:0 0 160px;">
+            <label>TopK 数量</label>
+            <input type="number" id="r_search_k" value="5" min="1" max="20">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="ragSearch()">🔎 搜索</button>
+        </div>
+        <div class="result" id="r_search_result"></div>
+      </div>
+    </div>
+
+    <div class="sub-panel" data-panel="init">
+      <div class="card">
+        <div class="card-title"><span class="method post">POST</span>/api/rag/init-sample-data</div>
+        <div class="card-desc">
+          一键加载预置的 8 条 Spring AI 相关知识条目到向量库。添加后可到「RAG 问答」Tab 测试，例如：
+          <code style="display:inline-block;margin:4px 4px 0;padding:2px 6px;background:#eef2ff;color:#3730a3;border-radius:4px;">Spring AI 支持哪些向量数据库？</code>
+          <code style="display:inline-block;margin:4px 4px 0;padding:2px 6px;background:#eef2ff;color:#3730a3;border-radius:4px;">RAG 的工作流程是什么？</code>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="ragInit()">🚀 加载示例知识库</button>
+        </div>
+        <div class="result" id="r_init_result"></div>
+      </div>
+    </div>
+  `;
+  $$('#ragTabs .sub-tab').forEach(t => t.onclick = () => switchSubTab(c, t.dataset.tab));
+  // 默认给 docs 加 2 个空行
+  ragAddDocRow();
+  ragAddDocRow();
+}
+
+function ragAddDocRow() {
+  const box = $('#r_doc_list');
+  const div = document.createElement('div');
+  div.className = 'doc-item';
+  div.innerHTML = `
+    <textarea placeholder="文档内容（必填），尽量包含完整的信息段落..."></textarea>
+    <div class="meta-row">
+      <input type="text" placeholder="source 来源（可选），如：manual-ch1">
+      <input type="text" placeholder="type 类型（可选），如：tutorial / overview">
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.doc-item').remove()">删除</button>
+    </div>
+  `;
+  box.appendChild(div);
+}
+function ragClearDocs() {
+  const box = $('#r_doc_list');
+  if (box) box.innerHTML = '';
+}
+
+async function ragSubmitDocs() {
+  const items = [];
+  $$('#r_doc_list .doc-item').forEach(row => {
+    const ta = row.querySelector('textarea');
+    const inputs = row.querySelectorAll('input[type=text]');
+    const content = ta.value.trim();
+    if (!content) return;
+    items.push({
+      content,
+      source: inputs[0].value.trim() || null,
+      type: inputs[1].value.trim() || null
+    });
+  });
+  if (items.length === 0) return alert('请至少填写一条非空文档内容');
+  const r = $('#r_docs_result');
+  try {
+    showLoading(r); setStatus('向量化存储中...');
+    const { data, elapsed } = await request({ method: 'POST', path: '/api/rag/documents', body: { documents: items } });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  POST /api/rag/documents  ·  提交 ${items.length} 条`);
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function ragAsk() {
+  const q = $('#r_ask_q').value.trim();
+  const withSrc = $('#r_ask_src').checked;
+  if (!q) return alert('请输入问题');
+  const r = $('#r_ask_result');
+  try {
+    showLoading(r); setStatus('RAG 检索 + 生成中...');
+    if (withSrc) {
+      const { data, elapsed } = await request({ path: '/api/rag/ask-with-sources', params: { question: q } });
+      let html = `<div class="meta-info">⏱️ ${elapsed}ms  ·  GET /api/rag/ask-with-sources  ·  引用 ${(data?.sources || []).length} 条文档</div>`;
+      html += `<div style="padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin-bottom:14px;"><strong style="color:#14532d;">🤖 回答：</strong><div style="margin-top:6px;white-space:pre-wrap;line-height:1.7;">${escapeHtml(data?.answer ?? '')}</div></div>`;
+      html += `<div><strong style="color:#3730a3;">📚 引用来源：</strong>`;
+      (data?.sources || []).forEach((s, i) => {
+        html += `<div class="source-card" style="margin-top:8px;"><div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:4px;">来源 #${i + 1}</div><div class="src-content">${escapeHtml(s.content ?? '')}</div><div class="src-meta">metadata = ${JSON.stringify(s.metadata ?? {})}</div></div>`;
+      });
+      html += `</div>`;
+      r.className = 'result show';
+      r.innerHTML = html;
+    } else {
+      const { data, elapsed } = await request({ path: '/api/rag/ask', params: { question: q }, raw: true });
+      showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  GET /api/rag/ask`);
+    }
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function ragSearch() {
+  const query = $('#r_search_q').value.trim();
+  const k = parseInt($('#r_search_k').value) || 5;
+  if (!query) return alert('请输入查询文本');
+  const r = $('#r_search_result');
+  try {
+    showLoading(r); setStatus('向量检索中...');
+    const { data, elapsed } = await request({ path: '/api/rag/search', params: { query, topK: k } });
+    let html = `<div class="meta-info">⏱️ ${elapsed}ms  ·  GET /api/rag/search  ·  TopK=${k}  ·  命中 ${(Array.isArray(data) ? data.length : 0)} 条</div>`;
+    (Array.isArray(data) ? data : []).forEach((d, i) => {
+      html += `<div class="source-card" style="margin-top:8px;border-left-color:#f59e0b;"><div style="font-size:11px;color:#d97706;font-weight:600;margin-bottom:4px;">#${i + 1} 相似度命中</div><div class="src-content">${escapeHtml(d.content ?? '')}</div><div class="src-meta">metadata = ${JSON.stringify(d.metadata ?? {})}</div></div>`;
+    });
+    if (!Array.isArray(data) || data.length === 0) {
+      html += `<div style="padding:20px;text-align:center;color:#6b7280;">无命中结果（请先初始化知识库）</div>`;
+    }
+    r.className = 'result show';
+    r.innerHTML = html;
+    setStatus('成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+
+async function ragInit() {
+  const r = $('#r_init_result');
+  try {
+    showLoading(r); setStatus('初始化示例数据中（会调用 Embedding 向量化）...');
+    const { data, elapsed } = await request({ method: 'POST', path: '/api/rag/init-sample-data' });
+    showResult(r, data, 'success', `⏱️ ${elapsed}ms  ·  POST /api/rag/init-sample-data`);
+    setStatus('示例数据加载成功');
+  } catch (e) { showResult(r, '❌ ' + e.message, 'error'); setStatus('失败', false); }
+}
+</script>
+</body>
+</html>

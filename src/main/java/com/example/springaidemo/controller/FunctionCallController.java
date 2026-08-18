@@ -1,5 +1,6 @@
 package com.example.springaidemo.controller;
 
+import com.example.springaidemo.model.OrderRequest;
 import com.example.springaidemo.model.WeatherRequest;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.ToolCallback;
@@ -7,7 +8,6 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -79,11 +79,25 @@ public class FunctionCallController {
 
     /**
      * 模拟创建订单的函数
+     * <p>
+     * 入参使用 {@link OrderRequest}（强类型 record），而非 {@code Map<String, Object>}。
+     * 原因：当 {@code inputType} 为 {@code Map.class} 时，Spring AI 生成的参数
+     * JSON Schema 只有一个空对象结构 {@code {"type":"object"}}，缺少字段名与类型约束。
+     * LLM 因此无法稳定地按 {@code product} / {@code quantity} 字段名传参，
+     * 可能传成 {@code count}、{@code num}、{@code 数量} 等任意键名，甚至省略字段，
+     * 导致 {@code params.get("quantity")} 返回 {@code null}，
+     * 调用 {@code .intValue()} 时抛出 NPE。
+     * <p>
+     * 改用 record 后，JSON Schema 会生成完整的字段定义与 required 约束，
+     * LLM 可稳定传参，并由 Jackson 自动绑定到强类型字段，杜绝 NPE。
+     *
+     * @param request 订单请求，包含商品名称与数量
+     * @return 订单创建结果
      */
-    public String createOrder(Map<String, Object> params) {
+    public String createOrder(OrderRequest request) {
         int orderId = orderIdGenerator.incrementAndGet();
-        String product = (String) params.get("product");
-        int quantity = ((Number) params.get("quantity")).intValue();
+        String product = request.product();
+        int quantity = request.quantity();
         return "订单创建成功！订单号：" + orderId
                 + "，商品：" + product
                 + "，数量：" + quantity
@@ -119,10 +133,15 @@ public class FunctionCallController {
                                 .description("获取当前的日期和时间，不需要任何参数")
                                 .build(),
 
-                        // 创建订单工具 - 使用 Function 接口，输入为 Map
-                        FunctionToolCallback.builder("createOrder", (java.util.function.Function<Map<String, Object>, String>) this::createOrder)
-                                .description("创建一个新订单，需要商品名称(product)和数量(quantity)两个参数")
-                                .inputType(Map.class)
+                        // 创建订单工具 - 使用 Function 接口，输入为 OrderRequest 强类型对象
+                        // 注意：inputType 必须是结构明确的对象类型(如 OrderRequest)，不能用 Map.class。
+                        // 原因：Map.class 生成的 JSON Schema 只有 {"type":"object"}，缺少字段名与
+                        // 类型约束，LLM 可能传错参数名(如 count/num/数量)或省略字段，导致
+                        // params.get("quantity") 返回 null，调用 .intValue() 时抛出 NPE。
+                        // 改用 OrderRequest 后，Schema 会带上完整的 properties 与 required 约束。
+                        FunctionToolCallback.builder("createOrder", (java.util.function.Function<OrderRequest, String>) this::createOrder)
+                                .description("创建一个新订单。参数：product(字符串,商品名称)、quantity(整数,购买数量)，两个参数均为必填")
+                                .inputType(OrderRequest.class)
                                 .build()
                 )
                 .call()

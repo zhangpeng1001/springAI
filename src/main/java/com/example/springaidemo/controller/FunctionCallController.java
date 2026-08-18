@@ -1,5 +1,6 @@
 package com.example.springaidemo.controller;
 
+import com.example.springaidemo.model.WeatherRequest;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
@@ -49,8 +50,17 @@ public class FunctionCallController {
 
     /**
      * 模拟查询天气的函数
+     * <p>
+     * 入参使用 {@link WeatherRequest}（对象类型），而非 {@code String}。
+     * 原因：LLM 发起工具调用时参数恒为 JSON 对象（{@code {"city":"北京"}}），
+     * 若 {@code inputType} 设为 {@code String.class}，Jackson 无法把对象反序列化
+     * 为字符串，会抛 {@code MismatchedInputException}。
+     *
+     * @param request 天气查询请求，包含城市名称
+     * @return 天气信息描述
      */
-    public String getWeather(String city) {
+    public String getWeather(WeatherRequest request) {
+        String city = request.city();
         return switch (city) {
             case "北京" -> "北京：晴朗，温度 22°C，西北风 3 级，空气质量优良";
             case "上海" -> "上海：多云，温度 25°C，东南风 4 级，湿度 65%";
@@ -96,9 +106,12 @@ public class FunctionCallController {
                 .user(message)
                 .tools(
                         // 天气查询工具 - 使用 Function 接口
-                        FunctionToolCallback.builder("getWeather", (java.util.function.Function<String, String>) this::getWeather)
+                        // 注意：inputType 必须是对象类型(WeatherRequest)，不能用 String。
+                        // 否则 LLM 返回 {"city":"..."} 对象时，Jackson 无法反序列化为 String，
+                        // 会抛 MismatchedInputException。
+                        FunctionToolCallback.builder("getWeather", (java.util.function.Function<WeatherRequest, String>) this::getWeather)
                                 .description("查询指定城市的天气信息，包括温度、湿度、风力等。参数为城市名称")
-                                .inputType(String.class)
+                                .inputType(WeatherRequest.class)
                                 .build(),
 
                         // 当前时间工具 - 使用 Supplier 接口（无参函数）

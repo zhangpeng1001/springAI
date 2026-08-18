@@ -47,7 +47,7 @@ spring:
       # 用于 RAG 检索增强生成，将文本转换为向量
       embedding:
         options:
-          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+          model: ${OPENAI_EMBEDDING_MODEL:Qwen3-Embedding-0.6B}
 
 
 # ====================================================================

@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 函数调用的工作流程：
  * <ol>
- *     <li>在调用 ChatClient 时通过 toolCallbacks() 注册可用的函数</li>
+ *     <li>在调用 ChatClient 时通过 tools() 注册可用的函数</li>
  *     <li>AI 模型判断需要调用哪个函数，并生成函数调用指令</li>
  *     <li>Spring AI 自动执行函数并将结果发送回 AI</li>
  *     <li>AI 根据结果生成最终回复</li>
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Spring AI 2.0 重要变化：
  * <ul>
  *     <li>使用 FunctionToolCallback.builder() 创建工具</li>
- *     <li>通过 ChatClientRequestSpec.toolCallbacks() 注册工具</li>
+ *     <li>通过 ChatClientRequestSpec.tools() 注册工具</li>
  *     <li>支持 Supplier、Consumer、Function、BiFunction 等函数式接口</li>
  * </ul>
  *
@@ -84,7 +84,7 @@ public class FunctionCallController {
      * 让 AI 自动调用工具函数
      * <p>
      * Spring AI 2.0 使用 FunctionToolCallback 注册工具。
-     * 通过 toolCallbacks() 方法将工具注册到对话中。
+     * 通过 tools() 方法将工具注册到对话中。
      *
      * @param message 用户自然语言问题
      * @return AI 回复（可能包含函数调用的结果）
@@ -94,7 +94,7 @@ public class FunctionCallController {
         // 注册多个工具，AI 会根据用户问题自动选择最合适的
         return chatClient.prompt()
                 .user(message)
-                .toolCallbacks(
+                .tools(
                         // 天气查询工具 - 使用 Function 接口
                         FunctionToolCallback.builder("getWeather", (java.util.function.Function<String, String>) this::getWeather)
                                 .description("查询指定城市的天气信息，包括温度、湿度、风力等。参数为城市名称")

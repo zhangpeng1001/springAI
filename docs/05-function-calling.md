@@ -40,7 +40,7 @@ GET /api/function/weather?message=北京今天天气怎么样
 public String weatherChat(@RequestParam String message) {
     return chatClient.prompt()
             .user(message)
-            .toolCallbacks(
+            .tools(
                     FunctionToolCallback.builder("getWeather", (Function<String, String>) this::getWeather)
                             .description("查询指定城市的天气信息")
                             .inputType(String.class)
@@ -76,7 +76,7 @@ GET /api/function/multi?message=查询股票并计算
 public String multiFunctionChat(@RequestParam String message) {
     return chatClient.prompt()
             .user(message)
-            .toolCallbacks(
+            .tools(
                     FunctionToolCallback.builder("getStockPrice", (Function<String, Double>) this::getStockPrice)
                             .description("查询股票价格，参数为股票代码")
                             .inputType(String.class)
@@ -101,7 +101,7 @@ public String multiFunctionChat(@RequestParam String message) {
 public String supplierChat(@RequestParam String message) {
     return chatClient.prompt()
             .user(message)
-            .toolCallbacks(
+            .tools(
                     FunctionToolCallback.builder("currentTime", (Supplier<String>) this::getCurrentTime)
                             .description("获取当前时间")
                             .inputType(Void.class)
@@ -126,7 +126,7 @@ private String getCurrentTime() {
 public String complexFunctionChat(@RequestParam String message) {
     return chatClient.prompt()
             .user(message)
-            .toolCallbacks(
+            .tools(
                     FunctionToolCallback.builder("searchDatabase", 
                             (Function<SearchRequest, SearchResult>) this::searchDatabase)
                             .description("搜索数据库，支持按关键词和日期范围搜索")
@@ -162,7 +162,7 @@ public record SearchResult(List<String> items, int totalCount) {}
 // 获取完整的工具调用信息
 ChatResponse response = chatClient.prompt()
         .user(message)
-        .toolCallbacks(toolCallback)
+        .tools(toolCallback)
         .call()
         .chatResponse();
 

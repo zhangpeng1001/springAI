@@ -115,7 +115,19 @@ FunctionToolCallback callback = FunctionToolCallback.builder("getWeather",
         .build();
 ```
 
-### 5. Media 类变更
+### 5. toolCallbacks() 重命名为 tools()
+
+```java
+// 2.0.0-Mx/早期版本（已弃用，标记移除）
+.toolCallbacks(toolCallback)
+
+// 2.0.0 GA 正式版本
+.tools(toolCallback)
+```
+
+FunctionToolCallback 的构建方式保持不变，只需将 ChatClient 调用链中的 `.toolCallbacks(...)` 替换为 `.tools(...)` 即可。
+
+### 6. Media 类变更
 
 ```java
 // 1.x
@@ -218,6 +230,7 @@ Flux<String> stream = chatClient.prompt()
 - [ ] 替换 Options 构造方式为 Builder
 - [ ] 替换 ChatMemory 实现
 - [ ] 替换 ToolCallback 为 FunctionToolCallback
+- [ ] 替换 `.toolCallbacks()` 为 `.tools()`
 - [ ] 替换 Media.from() 为 Media.builder()
 - [ ] 替换 Prompt.add() 为构造函数
 - [ ] 调整 Advisor 参数传递方式

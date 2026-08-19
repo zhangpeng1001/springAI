@@ -53,6 +53,41 @@ spring:
 # ====================================================================
 # 日志配置：开启 DEBUG 级别可以看到 Spring AI 的请求和响应详情
 # ====================================================================
+# ====================================================================
+# 质检规范知识库（qualityScheme）配置
+# 对应 LlamaIndex qualityScheme 模块，使用 Milvus 向量数据库
+# ====================================================================
+quality:
+  scheme:
+    # 标准规范 PDF 文档目录（7 份质检规范文档）
+    standard-dir: file:standard/
+    # Milvus 向量数据库连接配置（免认证，直接使用）
+    milvus:
+      uri: http://milvus-dev1.e-tudou.com:19530
+      database-name: kernel_data_platform
+      collection-name: qualityScheme_springAI
+      # 嵌入向量维度（Qwen3-Embedding-0.6B 输出 1024 维）
+      embedding-dimension: 1024
+      # 索引类型：IVF_FLAT 适合中小规模数据
+      index-type: IVF_FLAT
+      # 相似度度量：COSINE（与 LlamaIndex 版一致）
+      metric-type: COSINE
+    # 文档切块参数
+    chunk:
+      # TokenTextSplitter 每块最大 token 数
+      chunk-size: 256
+      # 相邻块重叠 token 数，保留上下文连贯
+      chunk-overlap: 40
+    # 检索默认参数
+    retrieve:
+      default-top-k: 3
+    # 方案生成默认上下文检索数
+    scheme:
+      context-top-k: 5
+
+# ====================================================================
+# 日志配置：开启 DEBUG 级别可以看到 Spring AI 的请求和响应详情
+# ====================================================================
 logging:
   level:
     org.springframework.ai: DEBUG

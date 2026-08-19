@@ -9,6 +9,7 @@ import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * Spring AI 核心组件配置类
@@ -90,6 +91,7 @@ public class AiConfig {
      * @param embeddingModel 嵌入模型，用于将文档内容转换为向量
      */
     @Bean
+    @Primary
     public VectorStore vectorStore(EmbeddingModel embeddingModel) {
         return SimpleVectorStore.builder(embeddingModel).build();
     }

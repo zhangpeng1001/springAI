@@ -85,6 +85,26 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Spring AI Milvus 向量存储核心模块 -->
+        <!-- 手动配置 MilvusServiceClient + MilvusVectorStore，避免与现有 SimpleVectorStore 自动配置冲突 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-milvus-store</artifactId>
+        </dependency>
+
+        <!-- Spring AI PDF 文档读取器（PagePdfDocumentReader） -->
+        <!-- 用于读取 standard/ 目录下的质检规范 PDF 文档 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+        </dependency>
+
+        <!-- WebFlux 支持：流式 SSE 响应需要 Reactor Flux -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
         <!-- Lombok：减少样板代码 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>质检规范知识库问答 - Spring AI 2.0</title>
+<style>
+/* ========== 全局样式 ========== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  background: #f0f2f5;
+  color: #1f2937;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ========== 侧边栏 ========== */
+.sidebar {
+  width: 240px;
+  background: #1e293b;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.sidebar-header {
+  padding: 20px 18px;
+  border-bottom: 1px solid #334155;
+}
+.sidebar-header h1 { font-size: 16px; color: #f8fafc; margin-bottom: 4px; }
+.sidebar-header p { font-size: 12px; color: #94a3b8; }
+.nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+.nav-item {
+  padding: 12px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  color: #cbd5e1;
+}
+.nav-item:hover { background: #334155; color: #fff; }
+.nav-item.active {
+  background: #334155;
+  border-left-color: #6366f1;
+  color: #fff;
+  font-weight: 500;
+}
+.nav-icon {
+  width: 20px; height: 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.sidebar-footer {
+  padding: 12px 18px;
+  border-top: 1px solid #334155;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ========== 主内容 ========== */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar {
+  height: 56px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title { font-size: 16px; font-weight: 600; color: #111827; }
+.topbar-title small { font-size: 12px; color: #6b7280; font-weight: normal; margin-left: 8px; }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* ========== 标签面板 ========== */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ========== 卡片/面板 ========== */
+.panel {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* ========== 表单元素 ========== */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  transition: border-color 0.15s;
+  background: #fff;
+  color: #1f2937;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.form-textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+.form-row { display: flex; gap: 12px; }
+.form-row > * { flex: 1; }
+
+/* ========== 按钮 ========== */
+.btn {
+  padding: 8px 20px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.btn-primary { background: #6366f1; color: #fff; }
+.btn-primary:hover { background: #5558e3; }
+.btn-secondary { background: #e5e7eb; color: #374151; }
+.btn-secondary:hover { background: #d1d5db; }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ========== 结果展示 ========== */
+.result-area {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 6px;
+  min-height: 100px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.result-area.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+.result-area.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.answer-text {
+  background: #fff;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sources { margin-top: 12px; }
+.sources-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+.source-item {
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.source-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 4px;
+  align-items: center;
+}
+.source-file { font-weight: 500; color: #6366f1; }
+.source-score { color: #6b7280; font-size: 12px; }
+.source-preview { color: #4b5563; font-size: 13px; line-height: 1.5; }
+.muted { color: #9ca3af; }
+
+/* ========== 徽章 ========== */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.badge-success { background: #d1fae5; color: #065f46; }
+.badge-error { background: #fee2e2; color: #991b1b; }
+.badge-info { background: #dbeafe; color: #1e40af; }
+
+/* ========== 表格 ========== */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+th { background: #f9fafb; font-weight: 600; color: #374151; }
+tr:hover { background: #f9fafb; }
+code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 12px;
+}
+
+/* ========== 流式光标 ========== */
+.stream-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: #6366f1;
+  animation: blink 1s steps(2) infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ========== Toast ========== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 6px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+</style>
+</head>
+<body>
+
+<!-- ========== 侧边栏 ========== -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>质检规范知识库</h1>
+    <p>Spring AI 2.0 + Milvus</p>
+  </div>
+  <div class="nav">
+    <div class="nav-item active" data-tab="status"><span class="nav-icon">📊</span> 状态管理</div>
+    <div class="nav-item" data-tab="rag"><span class="nav-icon">💬</span> RAG 问答</div>
+    <div class="nav-item" data-tab="retrieve"><span class="nav-icon">🔍</span> 向量检索</div>
+    <div class="nav-item" data-tab="part"><span class="nav-icon">📑</span> 按部分检索</div>
+    <div class="nav-item" data-tab="summary"><span class="nav-icon">📝</span> 全文总结</div>
+    <div class="nav-item" data-tab="stream"><span class="nav-icon">⚡</span> 流式问答</div>
+    <div class="nav-item" data-tab="scheme"><span class="nav-icon">📋</span> 方案编排</div>
+  </div>
+  <div class="sidebar-footer">
+    <div>API: <code>localhost:8080/api/quality</code></div>
+    <div style="margin-top:4px;">collection: <code>qualityScheme_springAI</code></div>
+  </div>
+</div>
+
+<!-- ========== 主内容 ========== -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">
+      质检规范知识库问答系统
+      <small id="health-badge">检查中…</small>
+    </div>
+    <button class="btn btn-secondary" id="btn-refresh">刷新状态</button>
+  </div>
+  <div class="content">
+
+    <!-- ===== 状态管理 ===== -->
+    <div class="tab-panel active" id="tab-status">
+      <div class="panel">
+        <div class="panel-title">系统状态</div>
+        <div id="status-info" class="result-area">点击"刷新状态"查看…</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">索引管理</div>
+        <div class="form-row">
+          <button class="btn btn-primary" id="btn-ingest">首次摄取文档</button>
+          <button class="btn btn-danger" id="btn-rebuild">重建索引</button>
+        </div>
+        <div id="ingest-result" class="result-area"></div>
+      </div>
+    </div>
+
+    <!-- ===== RAG 问答 ===== -->
+    <div class="tab-panel" id="tab-rag">
+      <div class="panel">
+        <div class="panel-title">RAG 问答（检索 → 上下文注入 → AI 生成）</div>
+        <div class="form-group">
+          <label class="form-label">问题</label>
+          <textarea class="form-textarea" id="rag-question" placeholder="例如：检测点编号规则是什么？"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Top-K（检索返回节点数）</label>
+            <input type="number" class="form-input" id="rag-topk" value="3" min="1" max="20">
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button class="btn btn-primary" id="rag-run">提交问题</button>
+          </div>
+        </div>
+        <div id="rag-result" class="result-area"></div>
+      </div>
+    </div>
+
+    <!-- ===== 向量检索 ===== -->
+    <div class="tab-panel" id="tab-retrieve">
+      <div class="panel">
+        <div class="panel-title">向量检索（纯检索，不调用 LLM）</div>
+        <div class="form-group">
+          <label class="form-label">检索问题</label>
+          <input type="text" class="form-input" id="rt-question" placeholder="例如：检测点坐标精度要求">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Top-K</label>
+            <input type="number" class="form-input" id="rt-topk" value="3" min="1" max="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">文件名过滤（可选）</label>
+            <input type="text" class="form-input" id="rt-file" placeholder="精确匹配文件名">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="rt-run">检索</button>
+        <div id="rt-result" class="result-area"></div>
+      </div>
+    </div>
+
+    <!-- ===== 按部分检索 ===== -->
+    <div class="tab-panel" id="tab-part">
+      <div class="panel">
+        <div class="panel-title">按规范部分检索（1~7 部分）</div>
+        <div class="form-group">
+          <label class="form-label">检索问题</label>
+          <input type="text" class="form-input" id="rp-question" placeholder="例如：检测点编号规则">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">部分编号（1~7）</label>
+            <input type="number" class="form-input" id="rp-part" value="1" min="1" max="7">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Top-K</label>
+            <input type="number" class="form-input" id="rp-topk" value="3" min="1" max="20">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="rp-run">按部分检索</button>
+        <div id="rp-result" class="result-area"></div>
+      </div>
+    </div>
+
+    <!-- ===== 全文总结 ===== -->
+    <div class="tab-panel" id="tab-summary">
+      <div class="panel">
+        <div class="panel-title">全文总结（Map-Reduce，遍历全部规范）</div>
+        <div class="form-group">
+          <label class="form-label">总结问题</label>
+          <input type="text" class="form-input" id="sm-question" value="请总结时空数据规范的核心内容">
+        </div>
+        <button class="btn btn-primary" id="sm-run">生成总结</button>
+        <div id="sm-result" class="result-area"></div>
+      </div>
+    </div>
+
+    <!-- ===== 流式问答 ===== -->
+    <div class="tab-panel" id="tab-stream">
+      <div class="panel">
+        <div class="panel-title">流式 RAG 问答（SSE 逐 token 推送）</div>
+        <div class="form-group">
+          <label class="form-label">问题</label>
+          <textarea class="form-textarea" id="sr-question" placeholder="例如：检测线数据有哪些质量要求？"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Top-K</label>
+            <input type="number" class="form-input" id="sr-topk" value="3" min="1" max="20">
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;">
+            <button class="btn btn-primary" id="sr-run">开始流式</button>
+            <button class="btn btn-danger" id="sr-stop" disabled>停止</button>
+          </div>
+        </div>
+        <div id="sr-result" class="result-area"></div>
+      </div>
+    </div>
+
+    <!-- ===== 方案编排 ===== -->
+    <div class="tab-panel" id="tab-scheme">
+      <div class="panel">
+        <div class="panel-title">质检方案编排（自然语言生成结构化方案）</div>
+        <div class="form-group">
+          <label class="form-label">质检需求描述</label>
+          <textarea class="form-textarea" id="sc-requirement" placeholder="例如：检测点坐标精度不超过0.5米，编号唯一"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">上下文检索数</label>
+            <input type="number" class="form-input" id="sc-topk" value="5" min="1" max="20">
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px;">
+            <button class="btn btn-primary" id="sc-run">生成方案</button>
+            <button class="btn btn-secondary" id="sc-show-items">查看检查项</button>
+          </div>
+        </div>
+        <div id="sc-result" class="result-area"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast 容器 -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==========================================================================
+// API 基础地址
+// ==========================================================================
+const API_BASE = 'http://localhost:8080/api/quality';
+
+// 工具函数
+const $ = (id) => document.getElementById(id);
+
+function toast(message, type = '') {
+  const el = $('toast');
+  el.textContent = message;
+  el.className = 'toast show ' + type;
+  setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+function setLoading(el, text = '加载中…') {
+  el.className = 'result-area loading';
+  el.textContent = text;
+}
+
+function setError(el, message) {
+  el.className = 'result-area error';
+  el.textContent = '❌ ' + message;
+}
+
+function setHtml(el, html) {
+  el.className = 'result-area';
+  el.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function renderAnswer(answer) {
+  return `<div class="answer-text">${escapeHtml(answer)}</div>`;
+}
+
+function renderSources(sources) {
+  if (!sources || sources.length === 0) return '';
+  const items = sources.map((s) => `
+    <div class="source-item">
+      <div class="source-meta">
+        <span class="source-file">${escapeHtml(s.fileName || s.file_name || '未知')}</span>
+        <span class="source-score">score: ${s.score != null ? s.score : 'N/A'}</span>
+        <span class="muted">#${s.position}</span>
+      </div>
+      <div class="source-preview">${escapeHtml(s.preview || '')}</div>
+    </div>`).join('');
+  return `<div class="sources">
+    <div class="sources-title">来源节点 (${sources.length})</div>
+    ${items}
+  </div>`;
+}
+
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`;
+    try { const err = await res.json(); detail = err.message || err.detail || JSON.stringify(err); } catch (_) {}
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+// ==========================================================================
+// 标签页切换
+// ==========================================================================
+document.querySelectorAll('.nav-item').forEach((nav) => {
+  nav.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+    nav.classList.add('active');
+    $(`tab-${nav.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ==========================================================================
+// 状态管理
+// ==========================================================================
+async function refreshHealth() {
+  const badge = $('health-badge');
+  const info = $('status-info');
+  badge.textContent = '检查中…';
+  setLoading(info, '正在检查服务状态…');
+  try {
+    const data = await fetch(`${API_BASE}/health`).then((r) => r.json());
+    badge.textContent = data.collectionExists ? '✅ 已就绪' : '⚠️ 未摄取';
+    const files = (data.standardFiles || []).map(f => `<div>${escapeHtml(f)}</div>`).join('');
+    setHtml(info, `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div><strong>Milvus URI:</strong> ${escapeHtml(data.milvusUri || '')}</div>
+        <div><strong>数据库:</strong> ${escapeHtml(data.milvusDatabase || '')}</div>
+        <div><strong>Collection:</strong> ${escapeHtml(data.milvusCollection || '')}</div>
+        <div><strong>向量维度:</strong> ${data.embeddingDimension}</div>
+        <div><strong>相似度:</strong> ${escapeHtml(data.metricType || '')}</div>
+        <div><strong>Collection 存在:</strong> <span class="badge ${data.collectionExists ? 'badge-success' : 'badge-error'}">${data.collectionExists ? '是' : '否'}</span></div>
+      </div>
+      <div style="margin-top:12px;"><strong>标准文档目录:</strong> ${escapeHtml(data.standardDir || '')}</div>
+      <div style="margin-top:8px;"><strong>标准文件 (${(data.standardFiles || []).length}):</strong></div>
+      <div style="margin-top:4px;padding-left:12px;">${files}</div>
+    `);
+  } catch (e) {
+    badge.textContent = '❌ 服务未启动';
+    setError(info, '服务未启动，请确认 Spring AI 应用已运行 (localhost:8080)');
+  }
+}
+
+$('btn-refresh').addEventListener('click', refreshHealth);
+
+$('btn-ingest').addEventListener('click', async () => {
+  const el = $('ingest-result');
+  setLoading(el, '正在摄取文档（加载 PDF → 切块 → 嵌入 → 写入 Milvus），请耐心等待…');
+  toast('正在摄取文档…');
+  try {
+    const data = await postJSON(`${API_BASE}/ingest`, {});
+    toast('摄取完成', 'success');
+    setHtml(el, `
+      <div class="answer-text">
+        <div><strong>状态:</strong> <span class="badge badge-success">${data.status}</span></div>
+        <div><strong>文档数:</strong> ${data.documentCount}</div>
+        <div><strong>切块数:</strong> ${data.chunkCount}</div>
+        <div><strong>耗时:</strong> ${data.elapsedMs}ms</div>
+        <div><strong>Collection:</strong> ${escapeHtml(data.collection || '')}</div>
+      </div>`);
+    await refreshHealth();
+  } catch (e) {
+    toast('摄取失败', 'error');
+    setError(el, e.message);
+  }
+});
+
+$('btn-rebuild').addEventListener('click', async () => {
+  if (!confirm('将删除现有 collection 并重新切块、嵌入质检规范，可能耗时较长。继续？')) return;
+  const el = $('ingest-result');
+  setLoading(el, '正在重建索引（删除旧 collection → 重新摄取）…');
+  toast('正在重建索引…');
+  try {
+    const data = await postJSON(`${API_BASE}/rebuild`, {});
+    toast('索引已重建', 'success');
+    setHtml(el, `
+      <div class="answer-text">
+        <div><strong>状态:</strong> <span class="badge badge-success">${data.status}</span></div>
+        <div><strong>文档数:</strong> ${data.documentCount}</div>
+        <div><strong>切块数:</strong> ${data.chunkCount}</div>
+        <div><strong>耗时:</strong> ${data.elapsedMs}ms</div>
+        <div><strong>消息:</strong> ${escapeHtml(data.message || '')}</div>
+      </div>`);
+    await refreshHealth();
+  } catch (e) {
+    toast('重建失败', 'error');
+    setError(el, e.message);
+  }
+});
+
+// ==========================================================================
+// RAG 问答
+// ==========================================================================
+$('rag-run').addEventListener('click', async () => {
+  const el = $('rag-result');
+  const q = $('rag-question').value.trim();
+  if (!q) { setError(el, '请输入问题'); return; }
+  setLoading(el, '正在检索并生成回答…');
+  try {
+    const data = await postJSON(`${API_BASE}/ask`, {
+      question: q,
+      topK: parseInt($('rag-topk').value, 10) || 3,
+    });
+    setHtml(el, renderAnswer(data.answer) + renderSources(data.sources));
+  } catch (e) { setError(el, e.message); }
+});
+
+// ==========================================================================
+// 向量检索
+// ==========================================================================
+$('rt-run').addEventListener('click', async () => {
+  const el = $('rt-result');
+  setLoading(el);
+  try {
+    const data = await postJSON(`${API_BASE}/retrieve`, {
+      question: $('rt-question').value,
+      topK: parseInt($('rt-topk').value, 10) || 3,
+      fileName: $('rt-file').value.trim() || null,
+    });
+    setHtml(el, renderSources(data.sources));
+  } catch (e) { setError(el, e.message); }
+});
+
+// ==========================================================================
+// 按部分检索
+// ==========================================================================
+$('rp-run').addEventListener('click', async () => {
+  const el = $('rp-result');
+  setLoading(el);
+  try {
+    const data = await postJSON(`${API_BASE}/retrieve/part`, {
+      question: $('rp-question').value,
+      partNumber: parseInt($('rp-part').value, 10),
+      topK: parseInt($('rp-topk').value, 10) || 3,
+    });
+    const badge = `<div class="answer-text">
+      <span class="muted">检索范围：</span>
+      <span class="badge badge-info">第${data.partNumber}部分</span>
+    </div>`;
+    setHtml(el, badge + renderSources(data.sources));
+  } catch (e) { setError(el, e.message); }
+});
+
+// ==========================================================================
+// 全文总结
+// ==========================================================================
+$('sm-run').addEventListener('click', async () => {
+  const el = $('sm-result');
+  setLoading(el, '正在遍历全部规范做总结（Map-Reduce），请稍候…');
+  try {
+    const data = await postJSON(`${API_BASE}/summary`, { question: $('sm-question').value });
+    setHtml(el, renderAnswer(data.answer));
+  } catch (e) { setError(el, e.message); }
+});
+
+// ==========================================================================
+// 流式问答 (SSE)
+// ==========================================================================
+let streamController = null;
+
+$('sr-run').addEventListener('click', () => {
+  const el = $('sr-result');
+  el.className = 'result-area';
+  el.innerHTML = '<span class="stream-cursor"></span>';
+  $('sr-run').disabled = true;
+  $('sr-stop').disabled = false;
+
+  streamController = new AbortController();
+  let buffer = "";
+
+  fetch(`${API_BASE}/ask-stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+    body: JSON.stringify({
+      question: $('sr-question').value,
+      topK: parseInt($('sr-topk').value, 10) || 3,
+    }),
+    signal: streamController.signal,
+  }).then(async (res) => {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let lineBuffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      lineBuffer += decoder.decode(value, { stream: true });
+      const lines = lineBuffer.split("\n");
+      lineBuffer = lines.pop();
+      for (const line of lines) {
+        // SSE 格式：data: {content}\n\n
+        if (!line.trim()) continue;
+        if (line.startsWith("data:")) {
+          const payload = line.slice(5).trim();
+          // 尝试解析 JSON，失败则当作纯文本
+          try {
+            const obj = JSON.parse(payload);
+            if (obj.content) buffer += obj.content;
+          } catch (_) {
+            buffer += payload;
+          }
+          el.innerHTML = escapeHtml(buffer) + '<span class="stream-cursor"></span>';
+        } else {
+          // 非 SSE 格式的纯文本流
+          buffer += line;
+          el.innerHTML = escapeHtml(buffer) + '<span class="stream-cursor"></span>';
+        }
+      }
+    }
+    el.innerHTML = escapeHtml(buffer);
+  }).catch((e) => {
+    if (e.name === 'AbortError') {
+      el.innerHTML = escapeHtml(buffer) + "\n\n[已停止]";
+    } else {
+      setError(el, e.message);
+    }
+  }).finally(() => {
+    $('sr-run').disabled = false;
+    $('sr-stop').disabled = true;
+    streamController = null;
+  });
+});
+
+$('sr-stop').addEventListener('click', () => {
+  if (streamController) streamController.abort();
+});
+
+// ==========================================================================
+// 方案编排
+// ==========================================================================
+$('sc-run').addEventListener('click', async () => {
+  const el = $('sc-result');
+  const req = $('sc-requirement').value.trim();
+  if (!req) { setError(el, '请输入质检需求描述'); return; }
+  setLoading(el, '正在检索规范并生成方案，请稍候…');
+  try {
+    const data = await postJSON(`${API_BASE}/scheme/generate`, {
+      requirement: req,
+      contextTopK: parseInt($('sc-topk').value, 10) || 5,
+    });
+    if (data.status === 'rejected') {
+      setHtml(el, `
+        <div class="answer-text">
+          <div>⚠️ ${escapeHtml(data.message || '未识别到质检方案要求')}</div>
+          <div class="muted" style="margin-top:8px;">${escapeHtml(data.suggestion || '')}</div>
+        </div>`);
+      return;
+    }
+    if (data.status === 'error') {
+      setError(el, data.message || '方案生成失败');
+      return;
+    }
+    renderScheme(el, data);
+  } catch (e) { setError(el, e.message); }
+});
+
+$('sc-show-items').addEventListener('click', async () => {
+  const el = $('sc-result');
+  setLoading(el, '加载检查项清单…');
+  try {
+    const data = await fetch(`${API_BASE}/scheme/check-items`).then((r) => r.json());
+    const rows = (data.data || []).map((item) => `
+      <tr>
+        <td><code>${escapeHtml(item.checkCode)}</code></td>
+        <td>${escapeHtml(item.checkName)}</td>
+        <td>${escapeHtml(item.checkDesc)}</td>
+        <td><code>${escapeHtml(item.checkParam)}</code></td>
+      </tr>`).join("");
+    setHtml(el, `
+      <div class="sources">
+        <div class="sources-title">预定义检查项清单 (${data.total} 项)</div>
+        <table>
+          <thead><tr><th>checkCode</th><th>名称</th><th>说明</th><th>参数</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`);
+  } catch (e) { setError(el, e.message); }
+});
+
+function renderScheme(el, scheme) {
+  const items = (scheme.checkItem || []).map((item) => `
+    <div class="source-item">
+      <div class="source-meta">
+        <span class="source-file">${escapeHtml(item.checkName)}</span>
+        <span class="source-score"><code>${escapeHtml(item.checkCode)}</code></span>
+      </div>
+      <div class="source-preview"><code>${escapeHtml(JSON.stringify(item.params, null, 2))}</code></div>
+    </div>`).join("");
+  setHtml(el, `
+    <div class="answer-text">
+      <div><strong>方案名称：</strong>${escapeHtml(scheme.schemeName)}</div>
+      <div style="margin-top:4px;"><strong>方案描述：</strong>${escapeHtml(scheme.description)}</div>
+    </div>
+    <div class="sources">
+      <div class="sources-title">检查项 (${(scheme.checkItem || []).length})</div>
+      ${items}
+    </div>
+    <details style="margin-top:12px;">
+      <summary class="muted">查看完整 JSON</summary>
+      <pre style="margin-top:8px;"><code>${escapeHtml(JSON.stringify(scheme, null, 2))}</code></pre>
+    </details>`);
+}
+
+// ==========================================================================
+// 初始化
+// ==========================================================================
+refreshHealth();
+</script>
+</body>
+</html>

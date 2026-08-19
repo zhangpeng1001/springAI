@@ -794,18 +794,41 @@ $('sc-show-items').addEventListener('click', async () => {
 });
 
 function renderScheme(el, scheme) {
-  const items = (scheme.checkItem || []).map((item) => `
+  // 渲染单个检查项卡片
+  // 后端 CheckItem 字段：checkCode、checkName、checkDesc、dataName、checkParam、paramNames、params
+  const items = (scheme.checkItem || []).map((item) => {
+    // 检查项参数（LLM 生成的具体取值），缺省为空对象
+    const paramsJson = item.params ? JSON.stringify(item.params, null, 2) : '{}';
+    // 规则参数名列表（不含 dataName，来自预定义清单）
+    const paramNames = (item.paramNames && item.paramNames.length)
+      ? item.paramNames.map((n) => `<code>${escapeHtml(n)}</code>`).join(' ')
+      : '<span class="muted">无</span>';
+    // 图层名称（每个检查项都有，可能为空）
+    const dataNameBadge = item.dataName
+      ? `<span class="badge badge-info">图层: ${escapeHtml(item.dataName)}</span>`
+      : '';
+    // 检查项说明
+    const descRow = item.checkDesc
+      ? `<div class="source-preview" style="margin-top:4px;">${escapeHtml(item.checkDesc)}</div>`
+      : '';
+    return `
     <div class="source-item">
       <div class="source-meta">
-        <span class="source-file">${escapeHtml(item.checkName)}</span>
-        <span class="source-score"><code>${escapeHtml(item.checkCode)}</code></span>
+        <span class="source-file">${escapeHtml(item.checkName || '')}</span>
+        <span class="source-score"><code>${escapeHtml(item.checkCode || '')}</code></span>
+        ${dataNameBadge}
       </div>
-      <div class="source-preview"><code>${escapeHtml(JSON.stringify(item.params, null, 2))}</code></div>
-    </div>`).join("");
+      ${descRow}
+      <div style="margin-top:6px;font-size:12px;color:#6b7280;">
+        <span class="muted">规则参数：</span>${paramNames}
+      </div>
+      <div class="source-preview" style="margin-top:4px;"><code>${escapeHtml(paramsJson)}</code></div>
+    </div>`;
+  }).join("");
   setHtml(el, `
     <div class="answer-text">
-      <div><strong>方案名称：</strong>${escapeHtml(scheme.schemeName)}</div>
-      <div style="margin-top:4px;"><strong>方案描述：</strong>${escapeHtml(scheme.description)}</div>
+      <div><strong>方案名称：</strong>${escapeHtml(scheme.schemeName || '')}</div>
+      <div style="margin-top:4px;"><strong>方案描述：</strong>${escapeHtml(scheme.description || '')}</div>
     </div>
     <div class="sources">
       <div class="sources-title">检查项 (${(scheme.checkItem || []).length})</div>

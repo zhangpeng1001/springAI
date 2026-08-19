@@ -163,7 +163,7 @@ public final class CheckItemDefinitions {
             new CheckItemDefinition(
                     "QualityCheckRangeValidation",
                     "范围值域检查",
-                    "检查字段值是否在规定值域范围内",
+                    "检查字段值是否在规定值域范围内，主要用于枚举值，如性别：1,2",
                     List.of(
                             new ParamSpec("fieldNames", "字段名，多个字段用英文逗号隔开", "type"),
                             new ParamSpec("fieldValues", "允许的值域列表，多个用英文逗号隔开", "1,2,3")

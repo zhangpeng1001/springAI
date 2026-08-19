@@ -88,11 +88,11 @@ public class QualitySchemeService {
     /**
      * 构造函数注入。
      *
-     * @param chatClient           Spring AI ChatClient（OpenAI 兼容）
-     * @param embeddingModel       嵌入模型（Qwen3-Embedding-0.6B）
+     * @param chatClient               Spring AI ChatClient（OpenAI 兼容）
+     * @param embeddingModel           嵌入模型（Qwen3-Embedding-0.6B）
      * @param qualitySchemeVectorStore 质检专用 MilvusVectorStore
-     * @param milvusServiceClient  Milvus 服务客户端（用于 collection 管理）
-     * @param properties           质检业务配置属性
+     * @param milvusServiceClient      Milvus 服务客户端（用于 collection 管理）
+     * @param properties               质检业务配置属性
      */
     public QualitySchemeService(
             ChatClient chatClient,
@@ -456,9 +456,9 @@ public class QualitySchemeService {
     /**
      * 按规范部分编号（1~7）检索。
      *
-     * @param question    检索问题
-     * @param partNumber  规范部分编号（1~7）
-     * @param topK        返回节点数
+     * @param question   检索问题
+     * @param partNumber 规范部分编号（1~7）
+     * @param topK       返回节点数
      * @return 来源 DTO 列表
      */
     public List<SourceDto> retrieveByPart(String question, int partNumber, int topK) {
@@ -568,9 +568,13 @@ public class QualitySchemeService {
      * 每个参数含名称、说明、示例，便于 LLM 理解。
      */
 
-    /** 规范化后的检查项列表（含解析后的 paramNames，不含 dataName） */
+    /**
+     * 规范化后的检查项列表（含解析后的 paramNames，不含 dataName）
+     */
     private static List<CheckItem> CHECK_ITEMS = null;
-    /** checkCode → CheckItem 映射，用于 O(1) 校验 */
+    /**
+     * checkCode → CheckItem 映射，用于 O(1) 校验
+     */
     private static Map<String, CheckItem> CHECK_ITEM_BY_CODE = null;
 
     /**
@@ -676,20 +680,22 @@ public class QualitySchemeService {
     // ⑨ 方案生成 — 对应 LlamaIndex scheme_generator.py
     // ========================================================================
 
-    /** 方案生成 Prompt 模板（移植自 LlamaIndex scheme_generator.py） */
+    /**
+     * 方案生成 Prompt 模板（移植自 LlamaIndex scheme_generator.py）
+     */
     private static final String SCHEME_PROMPT_TEMPLATE = """
             你是实景三维质检方案编排专家。请根据"用户需求"与"时空数据规范上下文"，从"预定义检查项清单"中选择合适的检查项，生成结构化质检方案。
-
+            
             ## 时空数据规范上下文
             以下是检索到的与用户需求相关的规范条款，供你推断字段名、阈值等参数：
             %s
-
+            
             ## 预定义检查项清单（生成的 checkCode 必须只能来自此清单）
             %s
-
+            
             ## 用户需求
             %s
-
+            
             ## 输出要求
             请输出符合下列规则的方案：
             1. schemeName：简洁名称，体现数据对象与检查重点（如"检测点数据坐标与编号质检方案"）。
@@ -702,7 +708,7 @@ public class QualitySchemeService {
                - fieldNames 参数为字段名列表（字符串，逗号隔开）。
                - 不要添加用户未提及的检查项；若用户需求与某检查项无关，则不要选入。
             4. 若用户需求中包含数值阈值（如"不超过0.5米"），请将其填入对应参数（如 threshold 或 min_length / min_area / min_angle）。
-
+            
             请直接输出结构化结果。
             """;
 
@@ -715,8 +721,8 @@ public class QualitySchemeService {
      * 3. 调用 LLM 生成结构化方案。
      * 4. 校验 checkCode 合法性，过滤非法项并补齐缺失参数。
      *
-     * @param requirement  用户的自然语言质检需求
-     * @param contextTopK  检索规范上下文的条款数
+     * @param requirement 用户的自然语言质检需求
+     * @param contextTopK 检索规范上下文的条款数
      * @return 方案生成结果（包含 IntentResult 和 QualityScheme）
      */
     public SchemeGenerationResult generateScheme(String requirement, int contextTopK) {
@@ -742,7 +748,7 @@ public class QualitySchemeService {
         String checkItemsText = formatCheckItemsForPrompt();
         String prompt = String.format(SCHEME_PROMPT_TEMPLATE, context, checkItemsText, requirement);
 
-        log.info("调用 LLM 生成结构化方案");
+        log.info("调用 LLM 生成结构化方案,prompt:{}", prompt);
         QualityScheme rawScheme;
         try {
             rawScheme = chatClient.prompt()
@@ -818,22 +824,24 @@ public class QualitySchemeService {
     // ⑩ 意图识别 — 对应 LlamaIndex scheme_intent.py
     // ========================================================================
 
-    /** 意图识别 Prompt 模板（移植自 LlamaIndex scheme_intent.py） */
+    /**
+     * 意图识别 Prompt 模板（移植自 LlamaIndex scheme_intent.py）
+     */
     private static final String INTENT_PROMPT_TEMPLATE = """
             你是实景三维质检方案的意图识别专家。请判断"用户输入"是否为真实的质检方案要求。
-
+            
             ## 系统能识别的质检能力域（预定义检查项清单）
             以下检查项覆盖了系统支持的质检能力域（字段检查、几何检查、坐标系检查、图层一致性、值域、时间有效性、编码匹配等）：
             %s
-
+            
             ## 用户输入
             %s
-
+            
             ## 判定规则
             1. 若"用户输入"描述了可映射到上述任一检查项能力域的质检需求，即使未出现"质检方案"关键字（例如"检测点坐标精度不超过0.5米，编号唯一"、"检查图层是否使用平面坐标系"、"字段值是否唯一"），则 isQualityRequirement=true。
             2. 若"用户输入"为闲聊、问候、与质检无关的问题（例如"你好"、"今天天气怎么样"、"帮我写首诗"），则 isQualityRequirement=false，并在 suggestion 中给出质检需求示例引导用户重新输入。
             3. suggestion 示例："请输入具体的质检需求，例如：检测点坐标精度不超过0.5米，编号唯一；或：检查图层字段是否完整、是否使用平面坐标系。"
-
+            
             请直接输出结构化结果。
             """;
 
@@ -995,7 +1003,8 @@ public class QualitySchemeService {
     /**
      * RAG 问答结果 DTO。
      */
-    public record RagResult(String answer, List<SourceDto> sources) {}
+    public record RagResult(String answer, List<SourceDto> sources) {
+    }
 
     /**
      * 方案生成结果 DTO。
@@ -1006,5 +1015,6 @@ public class QualitySchemeService {
             String status,
             String message,
             String suggestion
-    ) {}
+    ) {
+    }
 }

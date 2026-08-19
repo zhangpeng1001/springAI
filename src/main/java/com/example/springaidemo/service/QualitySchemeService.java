@@ -2,10 +2,12 @@ package com.example.springaidemo.service;
 
 import com.example.springaidemo.config.QualitySchemeProperties;
 import com.example.springaidemo.model.qualityscheme.CheckItem;
+import com.example.springaidemo.model.qualityscheme.CheckItemDefinition;
+import com.example.springaidemo.model.qualityscheme.CheckItemDefinitions;
 import com.example.springaidemo.model.qualityscheme.IntentResult;
+import com.example.springaidemo.model.qualityscheme.ParamSpec;
 import com.example.springaidemo.model.qualityscheme.QualityScheme;
 import com.example.springaidemo.model.qualityscheme.SourceDto;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.param.IndexType;
@@ -560,45 +562,22 @@ public class QualitySchemeService {
     // ========================================================================
 
     /**
-     * 预定义检查项原始数据（28 项），移植自 LlamaIndex check_items.py。
+     * 预定义检查项定义来源：{@link CheckItemDefinitions#DEFINITIONS}（27 项）。
+     * <p>
+     * 原始数据已迁移至独立文件 CheckItemDefinitions.java，使用 record + ParamSpec 结构，
+     * 每个参数含名称、说明、示例，便于 LLM 理解。
      */
-    private static final String[][] RAW_CHECK_ITEMS = {
-            {"qualityCheckFieldLength", "字段长度检查", "检查字段长度是否符合定义规范", "VECTOR", "[\"data_name\",\"fieldNames\",\"fieldLengths\"]", "/gis-server-light/qualitycheck/fieldvaluelength"},
-            {"qualityCheckRequiredFieldMismatch", "必填值非空且不完全相同", "检查必填字段非空且值不完全一致", "VECTOR", "[\"data_name\",\"fieldNames\"]", "/gis-server-light/qualitycheck/notnullfieldvaldifferent"},
-            {"QualityCheckUniqueValue", "字段唯一值检查", "检查字段值是否唯一不重复", "VECTOR", "[\"data_name\",\"fieldNames\"]", "/gis-server-light/qualitycheck/uniquevalue"},
-            {"QualityCheckTimeValidity", "时间有效性检查", "检查时间字段是否在有效时间范围内", "VECTOR", "[\"data_name\",\"fieldNames\",\"dateStart\",\"dateEnd\"]", "/gis-server-light/qualitycheck/datevalid"},
-            {"qualityCheckLineOverlap", "线重叠检查", "检查线要素是否存在重叠重合", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/linenooverlap"},
-            {"QualityCheckPointOverlap", "点重叠检查", "检查点要素是否存在重叠重合", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/pointnooverlap"},
-            {"QualityInspectionLayerHangingPoints", "线悬挂点检查", "检查线要素是否存在悬挂点", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/linenodangles"},
-            {"QualityCheckInnerLayerBreaks", "碎线检查", "检查线要素是否存在小于最小长度的碎线", "VECTOR", "[\"data_name\",\"min_length\"]", "/gis-server-light/qualitycheck/brokenline"},
-            {"qualityInspectionFeatureOverlap", "面内重叠检查", "检查面要素内部是否存在重叠", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/areanooverlap"},
-            {"QualityInspectionSurfaceGapCheck", "面缝隙检查", "检查相邻面之间是否存在缝隙", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/areanogaps"},
-            {"QualityCheckInnerLayerFragments", "碎面检查", "检查面要素是否存在小于最小面积的碎面", "VECTOR", "[\"data_name\",\"min_area\"]", "/gis-server-light/qualitycheck/miniareapolygon"},
-            {"SharpAngleCheckForQC", "尖锐角检查", "检查要素是否存在小于阈值的尖锐角", "VECTOR", "[\"data_name\",\"min_angle\"]", "/gis-server-light/qualitycheck/acuteangle"},
-            {"QualityCheckSurfaceSelfIntersection", "面自相交检查", "检查面要素是否存在自相交问题", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/polygonnotselfintersect"},
-            {"QualityCheckVoidInspection", "面要素空洞检查", "检查面要素是否存在无效空洞", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/polygonmustnothaveisland"},
-            {"layerPolygonAreaConsistencyCheck", "面积与记录值一致性", "检查图层面要素面积与记录值是否一致", "VECTOR", "[\"dataName\",\"fieldNames\",\"threshold\",\"unit\"]", "/gis-server-light/qualitycheck/layerareasame"},
-            {"qualityCheckDecimalPlaces", "小数位数检查", "检查数值字段小数位数是否符合要求", "VECTOR", "[\"data_name\",\"fieldNames\",\"fieldScales\"]", "/gis-server-light/qualitycheck/fieldvaluescale"},
-            {"QualityCheckRangeValidation", "范围值域检查", "检查字段值是否在规定值域范围内", "VECTOR", "[\"data_name\",\"fieldNames\",\"fieldValues\"]", "/gis-server-light/qualitycheck/rangecodedomain"},
-            {"qualityCheckInvalidFieldValue", "字段非法字符检查", "检查字段值是否包含非法字符", "VECTOR", "[\"data_name\",\"fieldNames\"]", "/gis-server-light/qualitycheck/invalidvalue"},
-            {"qualityCheckCodeNameMatch", "编码名称匹配检查", "检查字段编码与名称是否匹配一致", "VECTOR", "[\"data_name\",\"fieldNames\",\"fieldValues\"]", "/gis-server-light/qualitycheck/codeandname"},
-            {"QualityCheckCoordinateSystem", "平面坐标系检查", "检查图层是否使用平面坐标系", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/planecoordinatesystem"},
-            {"qualityCheckFieldRequiredValidation", "字段必填非空", "检查指定字段是否必填且不为空", "VECTOR", "[\"data_name\",\"fieldNames\"]", "/gis-server-light/qualitycheck/fielddefnnonnull"},
-            {"QualityCheckFieldIntegrity", "属性字段完整性", "检查属性字段是否完整、符合规范", "VECTOR", "[\"data_name\",\"fieldNames\",\"fieldTypes\",\"fieldLengths\"]", "/gis-server-light/qualitycheck/fielddefnintegrity"},
-            {"checkLayerElementEmptyGeometry", "空几何检查", "检查图层要素是否存在空几何对象", "VECTOR", "[\"data_name\"]", "/gis-server-light/qualitycheck/layernullgeometry"},
-            {"QualityCheckLayerIntegrity", "图层完整性", "检查图层数据完整性", "VECTOR", "[\"data_name\",\"geometry_type\"]", "/gis-server-light/qualitycheck/layerintegrity"},
-            {"checkInterLayerAttributeConsistency", "图层间属性一致性", "检查不同图层之间属性信息是否一致", "VECTOR", "[\"dataName\",\"dz_data_name\",\"compare_fields_first\",\"compare_fields_second\"]", "/gis-server-light/qualitycheck/attributesame"},
-            {"CheckPolygonContainedAttrEqual", "多边形被包含且属性相等", "检查多边形是否被包含且对应属性值相等", "VECTOR", "[\"dataName\",\"dz_data_name\",\"compare_fields_first\",\"compare_fields_second\"]", "/gis-server-light/qualitycheck/areacoveredandsameattributes"},
-            {"InterLayerFeatureConsistencyCheck", "图层间空间属性一致性", "检查不同图层之间空间与属性信息是否一致", "VECTOR", "[\"dataName\",\"dz_data_name\",\"condition\",\"key_field_first\",\"key_field_second\",\"compare_fields_first\",\"compare_fields_second\"]", "/gis-server-light/qualitycheck/spaceandattributesame"},
-    };
 
-    /** 规范化后的检查项列表（含解析后的 paramNames） */
+    /** 规范化后的检查项列表（含解析后的 paramNames，不含 dataName） */
     private static List<CheckItem> CHECK_ITEMS = null;
     /** checkCode → CheckItem 映射，用于 O(1) 校验 */
     private static Map<String, CheckItem> CHECK_ITEM_BY_CODE = null;
 
     /**
      * 初始化检查项列表（懒加载）。
+     * <p>
+     * 从 {@link CheckItemDefinitions#DEFINITIONS} 构建 {@link CheckItem} 列表。
+     * dataName 不在 paramNames/checkParam 中（已提升到 CheckItem 外层字段）。
      */
     private synchronized void initCheckItems() {
         if (CHECK_ITEMS != null) return;
@@ -606,26 +585,21 @@ public class QualitySchemeService {
         CHECK_ITEMS = new ArrayList<>();
         CHECK_ITEM_BY_CODE = new HashMap<>();
 
-        for (String[] raw : RAW_CHECK_ITEMS) {
-            CheckItem item = new CheckItem(raw[0], raw[1], raw[2], raw[3], raw[4], raw[5]);
-            item.setParamNames(parseParamNames(raw[4]));
+        for (CheckItemDefinition def : CheckItemDefinitions.DEFINITIONS) {
+            // 从 CheckItemDefinition 构建 CheckItem（用于 API 输出）
+            CheckItem item = new CheckItem(def.checkCode(), def.checkName(), def.checkDesc());
+            // checkParam 保持为 JSON 字符串（仅含规则特有参数，不含 dataName）
+            try {
+                item.setCheckParam(objectMapper.writeValueAsString(def.getParamNames()));
+            } catch (Exception e) {
+                log.warn("序列化 paramNames 失败: checkCode={}, error={}", def.checkCode(), e.getMessage());
+                item.setCheckParam("[]");
+            }
+            item.setParamNames(def.getParamNames());
             CHECK_ITEMS.add(item);
-            CHECK_ITEM_BY_CODE.put(raw[0], item);
+            CHECK_ITEM_BY_CODE.put(def.checkCode(), item);
         }
         log.info("检查项清单初始化完成: 共 {} 项", CHECK_ITEMS.size());
-    }
-
-    /**
-     * 把 checkParam JSON 字符串解析为参数名列表。
-     */
-    private List<String> parseParamNames(String checkParam) {
-        try {
-            List<String> params = objectMapper.readValue(checkParam, new TypeReference<List<String>>() {});
-            return params;
-        } catch (Exception e) {
-            log.warn("解析 checkParam 失败: {}, error={}", checkParam, e.getMessage());
-            return new ArrayList<>();
-        }
     }
 
     /**
@@ -653,18 +627,48 @@ public class QualitySchemeService {
     }
 
     /**
-     * 把检查项清单格式化为供 LLM prompt 使用的 Markdown 表格。
+     * 把检查项清单格式化为供 LLM prompt 使用的结构化文本。
+     * <p>
+     * 格式：通用说明 + 逐项详述列表。
+     * - 通用参数（dataName、fieldNames、dz_data_name）在顶部统一说明
+     * - 每项列出规则特有参数（不含 dataName），附带说明 + 示例
+     * - 无额外参数的项标注"规则参数：无"
      */
     public String formatCheckItemsForPrompt() {
         initCheckItems();
         StringBuilder sb = new StringBuilder();
-        sb.append("| checkCode | checkName | checkDesc | 参数名 |\n");
-        sb.append("|---|---|---|---|\n");
-        for (CheckItem item : CHECK_ITEMS) {
-            String paramNames = String.join(", ", item.getParamNames());
-            sb.append(String.format("| %s | %s | %s | %s |\n",
-                    item.getCheckCode(), item.getCheckName(), item.getCheckDesc(), paramNames));
+
+        // 通用说明
+        sb.append("## 通用说明\n");
+        sb.append("每个检查项都有一个 dataName 字段（图层名称），填写被检查的图层名称，如 dltb、检测点、检测线。\n\n");
+        sb.append("以下参数在多个检查项中反复出现，含义固定：\n");
+        sb.append("- fieldNames：字段名称，多个字段用英文逗号隔开（如：id,name）\n");
+        sb.append("- dz_data_name：对照图层名称，用于图层间一致性检查（如：xzq）\n\n");
+
+        // 逐项详述
+        sb.append("## 预定义检查项清单（共").append(CheckItemDefinitions.DEFINITIONS.size());
+        sb.append("项，生成的 checkCode 必须只能来自此清单）\n");
+        sb.append("每个检查项需填写 dataName（图层名称）和下列规则参数：\n\n");
+
+        int index = 1;
+        for (CheckItemDefinition def : CheckItemDefinitions.DEFINITIONS) {
+            sb.append("### ").append(index).append(". ").append(def.checkCode())
+                    .append(" — ").append(def.checkName()).append("\n");
+            sb.append("说明：").append(def.checkDesc()).append("\n");
+
+            if (def.params().isEmpty()) {
+                sb.append("规则参数：无（仅需 dataName）\n\n");
+            } else {
+                sb.append("规则参数：\n");
+                for (ParamSpec param : def.params()) {
+                    sb.append("  - ").append(param.name()).append("：").append(param.desc());
+                    sb.append("。示例：").append(param.example()).append("\n");
+                }
+                sb.append("\n");
+            }
+            index++;
         }
+
         return sb.toString();
     }
 
@@ -692,10 +696,10 @@ public class QualitySchemeService {
             2. description：1-2 句描述方案目标与检查范围。
             3. checkItem：根据用户需求选择最匹配的检查项，遵循：
                - checkCode 必须来自上述清单，且 checkName 与清单一致。
-               - params 必须包含该检查项"参数名"列中声明的所有参数，键名与参数名完全一致。
+               - dataName 填写用户需求中提到的图层名称（如"检测点"、"检测线"），为顶层字段，不要放在 params 中。
+               - params 仅包含该检查项"规则参数"中声明的参数（不含 dataName），键名与参数名完全一致。
                - 参数值推断依据：优先参考"时空数据规范上下文"，上下文不足时结合用户需求合理设定。
-               - data_name 参数取用户需求中提到的数据对象中文名（如"检测点"、"检测线"）。
-               - fieldNames 参数为字段名列表（数组）。
+               - fieldNames 参数为字段名列表（字符串，逗号隔开）。
                - 不要添加用户未提及的检查项；若用户需求与某检查项无关，则不要选入。
             4. 若用户需求中包含数值阈值（如"不超过0.5米"），请将其填入对应参数（如 threshold 或 min_length / min_area / min_angle）。
 
